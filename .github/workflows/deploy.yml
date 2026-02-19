@@ -14,8 +14,9 @@ jobs:
           VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
         run: |
           if [ -z "$VERCEL_DEPLOY_HOOK" ]; then
-            echo "::warning::VERCEL_DEPLOY_HOOK secret not set. Skipping deploy trigger."
-            exit 0
+            echo "::error::VERCEL_DEPLOY_HOOK secret is not configured for this repository."
+            echo "::error::Go to GitHub repo → Settings → Secrets → Actions → Add VERCEL_DEPLOY_HOOK"
+            exit 1
           fi
           echo "Triggering Vercel deploy..."
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$VERCEL_DEPLOY_HOOK")
