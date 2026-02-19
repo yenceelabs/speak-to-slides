@@ -107,8 +107,9 @@ export async function POST(req: NextRequest) {
       theme: deckJson.theme || "modern",
     });
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com";
+    const baseUrl = (
+      process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com"
+    ).trim().replace(/\/$/, "");
     const deckUrl = `${baseUrl}/d/${deck.id}`;
 
     return NextResponse.json({

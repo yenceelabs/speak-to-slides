@@ -10,7 +10,7 @@ import { renderDeckToHTML, parseDeckJSON } from "@/lib/deck-renderer";
 import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com";
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com").trim().replace(/\/$/, "");
 
 const DECK_SYSTEM_PROMPT = `You are a professional presentation designer. Convert the user's request into a beautiful, engaging presentation.
 
