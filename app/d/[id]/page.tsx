@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getDeckById } from "@/lib/supabase";
 import { Metadata } from "next";
+import DeckViewer from "./DeckViewer";
 
 interface Props {
   params: { id: string };
@@ -39,10 +40,5 @@ export default async function DeckPage({ params }: Props) {
     notFound();
   }
 
-  return (
-    <div
-      style={{ width: "100vw", height: "100vh", overflow: "hidden" }}
-      dangerouslySetInnerHTML={{ __html: deck.html_content }}
-    />
-  );
+  return <DeckViewer deckId={deck.id} htmlContent={deck.html_content} slideCount={deck.slide_count} />;
 }

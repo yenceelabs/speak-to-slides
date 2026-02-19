@@ -9,6 +9,8 @@ export interface Slide {
   stats?: Array<{ value: string; label: string }>;
   caption?: string;
   placeholder?: boolean;
+  /** User-uploaded image URL — overrides AI placeholder on any slide type */
+  user_image_url?: string;
 }
 
 export interface DeckJSON {
@@ -85,29 +87,39 @@ function renderSlide(slide: Slide, index: number, total: number, colors: ReturnT
           </div>
         </div>`;
 
-    case "bullets":
+    case "bullets": {
+      const bulletUserImg = slide.user_image_url;
       return `
         <div class="slide" data-index="${index}" style="${slideStyle}align-items:flex-start;">
-          <div style="max-width:900px;width:100%;">
-            <h2 style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;color:${text};margin:0 0 40px;padding-bottom:16px;border-bottom:2px solid ${border};">${slide.heading || ""}</h2>
-            <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;">
-              ${(slide.points || []).map((pt, i) => `
-                <li class="bullet-item" style="display:flex;align-items:flex-start;gap:16px;opacity:0;transform:translateX(-20px);transition:all 0.4s ease ${i * 0.1}s;">
-                  <span style="min-width:32px;height:32px;background:${accent};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;">${i + 1}</span>
-                  <span style="font-size:clamp(1rem,1.8vw,1.3rem);color:${text};line-height:1.6;">${pt}</span>
-                </li>`).join("")}
-            </ul>
+          <div style="max-width:960px;width:100%;display:flex;gap:40px;align-items:flex-start;">
+            <div style="flex:1;min-width:0;">
+              <h2 style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;color:${text};margin:0 0 40px;padding-bottom:16px;border-bottom:2px solid ${border};">${slide.heading || ""}</h2>
+              <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;">
+                ${(slide.points || []).map((pt, i) => `
+                  <li class="bullet-item" style="display:flex;align-items:flex-start;gap:16px;opacity:0;transform:translateX(-20px);transition:all 0.4s ease ${i * 0.1}s;">
+                    <span style="min-width:32px;height:32px;background:${accent};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;">${i + 1}</span>
+                    <span style="font-size:clamp(1rem,1.8vw,1.3rem);color:${text};line-height:1.6;">${pt}</span>
+                  </li>`).join("")}
+              </ul>
+            </div>
+            ${bulletUserImg ? `<div style="flex-shrink:0;width:320px;"><img src="${bulletUserImg}" alt="Slide image" style="width:100%;border-radius:12px;border:2px solid ${border};object-fit:cover;max-height:400px;" /></div>` : ""}
           </div>
         </div>`;
+    }
 
-    case "content":
+    case "content": {
+      const contentUserImg = slide.user_image_url;
       return `
         <div class="slide" data-index="${index}" style="${slideStyle}align-items:flex-start;">
-          <div style="max-width:900px;width:100%;">
-            <h2 style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;color:${text};margin:0 0 32px;padding-bottom:16px;border-bottom:2px solid ${border};">${slide.heading || ""}</h2>
-            <p style="font-size:clamp(1rem,1.8vw,1.25rem);color:${textMuted};line-height:1.8;margin:0;">${slide.body || ""}</p>
+          <div style="max-width:960px;width:100%;display:flex;gap:40px;align-items:flex-start;">
+            <div style="flex:1;min-width:0;">
+              <h2 style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;color:${text};margin:0 0 32px;padding-bottom:16px;border-bottom:2px solid ${border};">${slide.heading || ""}</h2>
+              <p style="font-size:clamp(1rem,1.8vw,1.25rem);color:${textMuted};line-height:1.8;margin:0;">${slide.body || ""}</p>
+            </div>
+            ${contentUserImg ? `<div style="flex-shrink:0;width:320px;"><img src="${contentUserImg}" alt="Slide image" style="width:100%;border-radius:12px;border:2px solid ${border};object-fit:cover;max-height:400px;" /></div>` : ""}
           </div>
         </div>`;
+    }
 
     case "quote":
       return `
@@ -134,18 +146,22 @@ function renderSlide(slide: Slide, index: number, total: number, colors: ReturnT
           </div>
         </div>`;
 
-    case "image":
-      // TODO: Replace gradient placeholder with Gemini-generated image in Phase 2
+    case "image": {
+      const imgSrc = slide.user_image_url;
+      const imageBlock = imgSrc
+        ? `<img src="${imgSrc}" alt="${slide.heading || "Slide image"}" style="width:100%;height:320px;object-fit:cover;border-radius:16px;border:2px solid ${border};margin-bottom:24px;display:block;" />`
+        : `<div style="width:100%;height:320px;background:linear-gradient(135deg,${accent}33,${accentAlt}66);border-radius:16px;display:flex;align-items:center;justify-content:center;border:2px dashed ${border};margin-bottom:24px;" data-image-placeholder="true">
+              <span style="color:${textMuted};font-size:1rem;">🖼️ Drop an image here — or paste one via the bot</span>
+            </div>`;
       return `
         <div class="slide" data-index="${index}" style="${slideStyle}align-items:flex-start;">
           <div style="max-width:900px;width:100%;">
             <h2 style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;color:${text};margin:0 0 32px;">${slide.heading || ""}</h2>
-            <div style="width:100%;height:320px;background:linear-gradient(135deg,${accent}33,${accentAlt}66);border-radius:16px;display:flex;align-items:center;justify-content:center;border:2px dashed ${border};margin-bottom:24px;">
-              <span style="color:${textMuted};font-size:1rem;">🖼️ Visual placeholder — AI image coming in Phase 2</span>
-            </div>
+            ${imageBlock}
             ${slide.caption ? `<p style="font-size:1rem;color:${textMuted};text-align:center;font-style:italic;">${slide.caption}</p>` : ""}
           </div>
         </div>`;
+    }
 
     default:
       return `<div class="slide" data-index="${index}" style="${slideStyle}"><p style="color:${text};">Slide ${index + 1}</p></div>`;

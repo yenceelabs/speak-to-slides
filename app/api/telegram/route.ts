@@ -4,6 +4,7 @@ import {
   sendMessage,
   sendChatAction,
   transcribeVoice,
+  getFile,
 } from "@/lib/telegram";
 import { checkAndRecordUsage } from "@/lib/supabase";
 import {
@@ -304,6 +305,96 @@ async function handleVoice(chatId: number, fileId: string): Promise<void> {
 }
 
 // ============================================
+// PHOTO / IMAGE UPLOAD HANDLER
+// ============================================
+
+/**
+ * Parse a slide number from a caption like "slide 3", "3", "slide3"
+ * Returns 0-based index, or null if not specified.
+ */
+function parseSlideIndex(caption: string | undefined): number | null {
+  if (!caption) return null;
+  const match = caption.match(/slide\s*(\d+)/i) || caption.match(/^(\d+)$/);
+  if (!match) return null;
+  const n = parseInt(match[1], 10);
+  return isNaN(n) ? null : Math.max(0, n - 1); // convert to 0-based
+}
+
+async function handlePhoto(chatId: number, fileId: string, caption?: string): Promise<void> {
+  await sendChatAction(chatId, "typing");
+
+  // Find the active deck for this conversation
+  const conv = await getOrCreateConversation(String(chatId));
+  if (!conv.deck_id) {
+    await sendMessage(
+      chatId,
+      "📸 I received your image! But you don't have an active deck yet.\n\n" +
+        "Generate a deck first, then send your image with a caption like <code>slide 3</code> to place it."
+    );
+    return;
+  }
+
+  const slideIndex = parseSlideIndex(caption);
+  if (slideIndex === null) {
+    await sendMessage(
+      chatId,
+      "📸 Got your image!\n\n" +
+        "Which slide should I add it to? Reply with: <code>slide [number]</code>\n" +
+        "Example: <code>slide 3</code>"
+    );
+    // Store pending image: next message with a slide number will trigger re-upload
+    // For simplicity, ask them to resend with caption
+    return;
+  }
+
+  // Download the image from Telegram
+  let imageBuffer: ArrayBuffer;
+  let fileUrl: string;
+  try {
+    fileUrl = await getFile(fileId);
+    const res = await fetch(fileUrl);
+    imageBuffer = await res.arrayBuffer();
+  } catch {
+    await sendMessage(chatId, "❌ Failed to download your image. Please try again.");
+    return;
+  }
+
+  // Upload to our API
+  const formData = new FormData();
+  const blob = new Blob([imageBuffer], { type: "image/jpeg" });
+  formData.append("file", blob, `tg-photo-${Date.now()}.jpg`);
+  formData.append("deckId", conv.deck_id);
+  formData.append("slideIndex", String(slideIndex));
+
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com")
+    .trim()
+    .replace(/\/$/, "");
+
+  const uploadRes = await fetch(`${baseUrl}/api/upload-image`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const uploadData = await uploadRes.json();
+
+  if (!uploadRes.ok) {
+    await sendMessage(
+      chatId,
+      `❌ Failed to add image: ${uploadData.error || "Unknown error"}`
+    );
+    return;
+  }
+
+  const deckUrl = `${baseUrl}/d/${conv.deck_id}`;
+  await sendMessage(
+    chatId,
+    `✅ <b>Image added to slide ${slideIndex + 1}!</b>\n\n` +
+      `Your deck has been updated — same link:\n🔗 ${deckUrl}\n\n` +
+      `Want to add more images? Send another photo with <code>slide [number]</code> as the caption.`
+  );
+}
+
+// ============================================
 // WEBHOOK ENTRY POINT
 // ============================================
 
@@ -364,6 +455,14 @@ export async function POST(req: NextRequest) {
     // Handle voice messages
     if (update.message.voice) {
       await handleVoice(chatId, update.message.voice.file_id);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Handle photo messages — user uploading an image to a slide
+    if (update.message.photo && update.message.photo.length > 0) {
+      // Use the largest available photo (last in the array)
+      const photo = update.message.photo[update.message.photo.length - 1];
+      await handlePhoto(chatId, photo.file_id, update.message.caption);
       return NextResponse.json({ ok: true });
     }
 
