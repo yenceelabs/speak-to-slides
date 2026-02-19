@@ -3,6 +3,7 @@
 import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react';
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { POSTHOG_KEY, POSTHOG_HOST } from '@/lib/posthog-config';
 
 // ─── Init PostHog once on client ────────────────────────────────────────────
@@ -19,10 +20,15 @@ if (typeof window !== 'undefined') {
 // ─── Pageview tracker (fires on route changes) ───────────────────────────────
 function PageviewTracker() {
   const ph = usePostHog();
+  const pathname = usePathname();
 
   useEffect(() => {
-    ph?.capture('$pageview');
-  }, [ph]);
+    if (pathname) {
+      ph?.capture('$pageview', {
+        $current_url: window.location.href,
+      });
+    }
+  }, [ph, pathname]);
 
   return null;
 }
