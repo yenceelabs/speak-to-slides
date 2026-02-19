@@ -8,40 +8,21 @@ import {
 import { createDeck, checkAndRecordUsage } from "@/lib/supabase";
 import { renderDeckToHTML, parseDeckJSON } from "@/lib/deck-renderer";
 import Anthropic from "@anthropic-ai/sdk";
+import { requireEnv } from "@/lib/env";
+import { DECK_SYSTEM_PROMPT_SHORT } from "@/lib/deck-prompts";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com").trim().replace(/\/$/, "");
-
-const DECK_SYSTEM_PROMPT = `You are a professional presentation designer. Convert the user's request into a beautiful, engaging presentation.
-
-Output ONLY valid JSON in this exact format (no markdown, no explanation):
-{
-  "title": "Presentation Title",
-  "theme": "modern",
-  "slides": [
-    { "type": "title", "heading": "...", "subtitle": "..." },
-    { "type": "bullets", "heading": "...", "points": ["point 1", "point 2", "point 3"] },
-    { "type": "content", "heading": "...", "body": "paragraph text" },
-    { "type": "quote", "text": "...", "attribution": "..." },
-    { "type": "stats", "heading": "...", "stats": [{"value": "90%", "label": "description"}] }
-  ]
-}
-
-Theme options: "modern" (dark navy, indigo accent), "minimal" (light, clean), "bold" (dark, amber accent)
-
-Rules:
-- Generate 8-12 slides
-- Start with a title slide, end with "Thank You" or "Questions?" slide
-- Mix slide types for visual variety
-- Keep text concise and punchy
-- Choose theme based on content type`;
 
 async function handleDeckRequest(chatId: number, prompt: string) {
   await sendChatAction(chatId, "typing");
   await sendMessage(chatId, "🎨 Building your deck...");
 
   try {
-    // Check usage (use chatId as user identifier for Telegram)
+    // Fail fast if API key is missing
+    const apiKey = requireEnv("ANTHROPIC_API_KEY");
+    const client = new Anthropic({ apiKey });
+
+    // Use Telegram chatId as stable user identifier (server-side, trusted)
     const userId = `tg_${chatId}`;
     const usageCheck = await checkAndRecordUsage(null, userId);
 
@@ -57,7 +38,7 @@ async function handleDeckRequest(chatId: number, prompt: string) {
     const message = await client.messages.create({
       model: "claude-3-haiku-20240307",
       max_tokens: 4096,
-      system: DECK_SYSTEM_PROMPT,
+      system: DECK_SYSTEM_PROMPT_SHORT,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -87,6 +68,15 @@ async function handleDeckRequest(chatId: number, prompt: string) {
     );
   } catch (error) {
     console.error("Telegram deck generation error:", error);
+
+    if (error instanceof Error && error.message.includes("Missing required env var")) {
+      await sendMessage(
+        chatId,
+        "⚠️ Service is temporarily unavailable. Please try again later."
+      );
+      return;
+    }
+
     await sendMessage(
       chatId,
       "❌ Failed to generate your deck. Please try again with a different prompt."
@@ -96,7 +86,12 @@ async function handleDeckRequest(chatId: number, prompt: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const update: TelegramUpdate = await req.json();
+    let update: TelegramUpdate;
+    try {
+      update = await req.json();
+    } catch {
+      return NextResponse.json({ ok: true });
+    }
 
     if (!update.message) {
       return NextResponse.json({ ok: true });
@@ -138,6 +133,16 @@ export async function POST(req: NextRequest) {
 
     // Handle voice messages
     if (update.message.voice) {
+      // Check OPENAI_API_KEY before attempting transcription
+      const openAiKey = process.env.OPENAI_API_KEY;
+      if (!openAiKey) {
+        await sendMessage(
+          chatId,
+          "🎤 Voice transcription is not available right now. Please type your request instead!"
+        );
+        return NextResponse.json({ ok: true });
+      }
+
       const voice = update.message.voice;
       await sendChatAction(chatId, "typing");
       await sendMessage(chatId, "🎤 Transcribing your voice message...");

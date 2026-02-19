@@ -47,6 +47,11 @@ export async function getFile(fileId: string): Promise<string> {
 }
 
 export async function transcribeVoice(fileId: string): Promise<string> {
+  const openAiKey = process.env.OPENAI_API_KEY;
+  if (!openAiKey) {
+    throw new Error("OPENAI_API_KEY not configured — voice transcription unavailable");
+  }
+
   const fileUrl = await getFile(fileId);
 
   // Download the file
@@ -62,7 +67,7 @@ export async function transcribeVoice(fileId: string): Promise<string> {
   const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${openAiKey}`,
     },
     body: formData,
   });
