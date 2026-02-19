@@ -42,7 +42,10 @@ Rules:
 - For bullets: max 5 points per slide, each under 15 words
 - For stats: use real or realistic statistics when possible
 - Choose theme based on content: modern for tech, minimal for business, bold for creative/marketing
-- The title in the JSON should be a clean, professional title (not "Create a deck about...")`;
+- The title in the JSON should be a clean, professional title (not "Create a deck about...")
+
+${VISUAL_DESIGN_INSTRUCTIONS}
+${getTemplatePromptSection()}`;
 
 // ---------------------------------------------------------------------------
 // Condensed prompt — Telegram (saves tokens, mobile use-case)
@@ -70,4 +73,6 @@ Rules:
 - Start with a title slide, end with "Thank You" or "Questions?" slide
 - Mix slide types for visual variety
 - Keep text concise and punchy
-- Choose theme based on content type`;
+- Choose theme based on content type
+
+${VISUAL_DESIGN_INSTRUCTIONS}`;
