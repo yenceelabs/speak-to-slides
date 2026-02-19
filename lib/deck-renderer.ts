@@ -190,7 +190,7 @@ export function renderDeckToHTML(deckJson: DeckJSON): string {
   #deck { position:fixed; inset:0; }
   
   .slide { display:none; }
-  .slide.active { display:flex; }
+  .slide.active { display:flex !important; }
   
   /* Bullet animation */
   .slide.active .bullet-item { opacity:1 !important; transform:translateX(0) !important; }
@@ -294,6 +294,8 @@ ${slidesHTML}
     document.getElementById('prev-btn').disabled = current === 0;
     document.getElementById('next-btn').disabled = current === total - 1;
     document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+    // Notify parent frame of slide change
+    try { window.parent.postMessage({ type: 'slideChange', index: current }, '*'); } catch(e) {}
   }
 
   function nextSlide() { showSlide(current + 1); }
@@ -329,8 +331,12 @@ ${slidesHTML}
     }
   }, { passive: true });
 
-  // Init
-  showSlide(0);
+  // Init — run after DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { showSlide(0); });
+  } else {
+    showSlide(0);
+  }
 </script>
 </body>
 </html>`;

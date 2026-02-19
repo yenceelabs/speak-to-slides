@@ -6,6 +6,7 @@ interface Props {
   deckId: string;
   htmlContent: string;
   slideCount: number;
+  isOwner?: boolean;
 }
 
 interface UploadState {
@@ -15,7 +16,7 @@ interface UploadState {
   error?: string;
 }
 
-export default function DeckViewer({ deckId, htmlContent, slideCount }: Props) {
+export default function DeckViewer({ deckId, htmlContent, slideCount, isOwner = false }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUploadPanel, setShowUploadPanel] = useState(false);
@@ -111,36 +112,38 @@ export default function DeckViewer({ deckId, htmlContent, slideCount }: Props) {
         />
       </div>
 
-      {/* Floating upload button */}
-      <button
-        onClick={() => setShowUploadPanel((v) => !v)}
-        style={{
-          position: "fixed",
-          bottom: 80,
-          right: 20,
-          zIndex: 200,
-          background: showUploadPanel ? "#6366f1" : "rgba(15,23,42,0.85)",
-          border: "1px solid #334155",
-          color: "#f1f5f9",
-          borderRadius: 12,
-          padding: "10px 16px",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: "pointer",
-          backdropFilter: "blur(10px)",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-          transition: "all 0.2s",
-        }}
-        title="Add images to slides"
-      >
-        🖼️ {showUploadPanel ? "Close" : "Add Image"}
-      </button>
+      {/* Floating upload button — owner only */}
+      {isOwner && (
+        <button
+          onClick={() => setShowUploadPanel((v) => !v)}
+          style={{
+            position: "fixed",
+            bottom: 80,
+            right: 20,
+            zIndex: 200,
+            background: showUploadPanel ? "#6366f1" : "rgba(15,23,42,0.85)",
+            border: "1px solid #334155",
+            color: "#f1f5f9",
+            borderRadius: 12,
+            padding: "10px 16px",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+            backdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+            transition: "all 0.2s",
+          }}
+          title="Add images to slides"
+        >
+          🖼️ {showUploadPanel ? "Close" : "Add Image"}
+        </button>
+      )}
 
-      {/* Upload panel */}
-      {showUploadPanel && (
+      {/* Upload panel — owner only */}
+      {isOwner && showUploadPanel && (
         <div
           style={{
             position: "fixed",
