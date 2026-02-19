@@ -6,6 +6,13 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify internal API secret — only our Telegram bot should call this
+    const internalSecret = req.headers.get("x-internal-secret");
+    const expectedSecret = process.env.INTERNAL_API_SECRET;
+    if (!expectedSecret || internalSecret !== expectedSecret) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await req.formData();
 
     const file = formData.get("file") as File | null;

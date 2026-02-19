@@ -386,6 +386,9 @@ async function handlePhoto(chatId: number, fileId: string, caption?: string): Pr
 
   const uploadRes = await fetch(`${baseUrl}/api/upload-image`, {
     method: "POST",
+    headers: {
+      "x-internal-secret": process.env.INTERNAL_API_SECRET || "",
+    },
     body: formData,
   });
 
@@ -421,6 +424,16 @@ async function handlePhoto(chatId: number, fileId: string, caption?: string): Pr
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify Telegram webhook secret token
+    const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (expectedSecret) {
+      const secretToken = req.headers.get("x-telegram-bot-api-secret-token");
+      if (secretToken !== expectedSecret) {
+        // Return 200 to avoid Telegram retry storms, but don't process
+        return NextResponse.json({ ok: true });
+      }
+    }
+
     let update: TelegramUpdate;
     try {
       update = await req.json();

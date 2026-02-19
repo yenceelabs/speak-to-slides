@@ -19,14 +19,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `${deck.slide_count} slides · ${deck.prompt.slice(0, 120)}`,
       openGraph: {
         title: deck.title,
-        description: `A presentation created with SpeakToSlides · ${deck.slide_count} slides`,
+        description: `${deck.slide_count} slides · Created with SpeakToSlides`,
         siteName: "SpeakToSlides",
         type: "website",
+        url: `https://speaktoslides.com/d/${deck.id}`,
       },
       twitter: {
-        card: "summary",
+        card: "summary_large_image",
         title: deck.title,
-        description: `A presentation created with SpeakToSlides · ${deck.slide_count} slides`,
+        description: `${deck.slide_count} slides · Created with SpeakToSlides`,
       },
     };
   } catch {

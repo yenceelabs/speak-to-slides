@@ -129,7 +129,30 @@ export async function checkAndRecordUsage(
 ): Promise<{ allowed: boolean; reason?: string }> {
   const db = getSupabase();
 
-  // Logged-in users get unlimited decks (for now, can add pro limits later)
+  // Telegram users: limited to FREE_DECK_LIMIT_TELEGRAM decks (default 3)
+  if (userId?.startsWith("tg_")) {
+    const telegramLimit = parseInt(process.env.FREE_DECK_LIMIT_TELEGRAM || "3", 10);
+    const { data } = await db
+      .from("speaktoslides_usage")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(telegramLimit + 1);
+
+    if (data && data.length >= telegramLimit) {
+      return {
+        allowed: false,
+        reason: `Free tier: ${telegramLimit} deck${telegramLimit === 1 ? "" : "s"} per user. Start a Pro subscription at speaktoslides.com`,
+      };
+    }
+
+    await db.from("speaktoslides_usage").insert({
+      user_id: userId,
+      ip_address: ipAddress,
+    });
+    return { allowed: true };
+  }
+
+  // Authenticated (Clerk) users get unlimited decks
   if (userId) {
     await db.from("speaktoslides_usage").insert({
       user_id: userId,

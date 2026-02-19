@@ -245,37 +245,47 @@ export default function HomePage() {
         <h2 className="text-3xl font-bold text-center mb-12">
           Everything you need to present
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
               icon: "⚡",
               title: "Instant generation",
-              desc: "From prompt to shareable deck in under 10 seconds.",
+              desc: "From prompt to shareable deck in under 15 seconds. No waiting, no exports.",
+            },
+            {
+              icon: "🗣️",
+              title: "Conversational builder",
+              desc: "AI asks you 1–2 questions, proposes a structure, then builds. Not a blind generator.",
             },
             {
               icon: "🎨",
-              title: "Beautiful design",
-              desc: "Dark & light themes, keyboard nav, fullscreen mode.",
+              title: "3 beautiful themes",
+              desc: "Modern (dark navy), Minimal (light), and Bold (amber). All with fullscreen + keyboard nav.",
             },
             {
-              icon: "🔗",
-              title: "Permanent link",
-              desc: "Share one link that works on any screen — laptop, TV, phone.",
+              icon: "✏️",
+              title: "Surgical editing",
+              desc: "Change a slide with a message — only that slide updates. Same permanent link.",
             },
             {
-              icon: "🎤",
-              title: "Voice input",
-              desc: "Speak your idea. No typing required.",
+              icon: "🖼️",
+              title: "Add your own images",
+              desc: "Drag & drop images onto any slide from the web, or send a photo via the Telegram bot.",
             },
             {
               icon: "📱",
-              title: "Telegram bot",
-              desc: "Generate decks directly from your Telegram chat.",
+              title: "Telegram-native",
+              desc: "Build full decks from your phone via @SpeakToSlides_bot. Voice notes welcome.",
+            },
+            {
+              icon: "🔗",
+              title: "Permanent shareable link",
+              desc: "One link works on any screen — laptop, TV, phone. No app install needed.",
             },
             {
               icon: "🌐",
               title: "No sign-up needed",
-              desc: "First deck is free, no account required.",
+              desc: "First deck is free with no account. Sign in to create unlimited decks.",
             },
           ].map(({ icon, title, desc }) => (
             <div
@@ -298,7 +308,7 @@ export default function HomePage() {
             href="https://yenceelabs.com"
             className="text-indigo-400 hover:text-indigo-300"
           >
-            NC Labs
+            Yencee Labs
           </a>{" "}
           · SpeakToSlides
         </p>

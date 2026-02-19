@@ -145,7 +145,18 @@ export async function editSlides(
     clean = clean.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
   }
 
-  const updatedSlides: Slide[] = JSON.parse(clean);
+  let updatedSlides: Slide[];
+  try {
+    updatedSlides = JSON.parse(clean);
+  } catch (e) {
+    console.error("editSlides: AI returned non-JSON:", clean.slice(0, 200));
+    throw new Error("AI returned invalid JSON for slide edit. Please try again.");
+  }
+
+  if (!Array.isArray(updatedSlides)) {
+    throw new Error("AI returned unexpected format for slides. Please try again.");
+  }
+
   return updatedSlides;
 }
 

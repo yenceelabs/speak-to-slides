@@ -3,7 +3,7 @@
 import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react';
 import { useEffect } from 'react';
-import { POSTHOG_KEY, POSTHOG_HOST } from '@/lib/posthog';
+import { POSTHOG_KEY, POSTHOG_HOST } from '@/lib/posthog-config';
 
 // ─── Init PostHog once on client ────────────────────────────────────────────
 if (typeof window !== 'undefined') {

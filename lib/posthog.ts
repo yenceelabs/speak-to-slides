@@ -1,8 +1,9 @@
-// PostHog analytics — client + server helpers
+// PostHog analytics — SERVER-ONLY helpers
+// Client code should import from @/lib/posthog-config for POSTHOG_KEY/HOST
 // Project: SpeakToSlides | ID: 314975
 
-export const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || 'phc_GfraBph9Radjd6a4R0Zae89WbGozDvGZswo3OkEgynu';
-export const POSTHOG_HOST = 'https://us.i.posthog.com';
+export { POSTHOG_KEY, POSTHOG_HOST } from './posthog-config';
+import { POSTHOG_KEY, POSTHOG_HOST } from './posthog-config';
 
 // ─── Server-side events (API routes) ───────────────────────────────────────
 // Uses posthog-node — no browser required.
