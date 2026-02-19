@@ -5,71 +5,195 @@ import {
   sendChatAction,
   transcribeVoice,
 } from "@/lib/telegram";
-import { createDeck, checkAndRecordUsage } from "@/lib/supabase";
-import { renderDeckToHTML, parseDeckJSON } from "@/lib/deck-renderer";
-import Anthropic from "@anthropic-ai/sdk";
-import { requireEnv } from "@/lib/env";
-import { DECK_SYSTEM_PROMPT_SHORT } from "@/lib/deck-prompts";
+import { checkAndRecordUsage } from "@/lib/supabase";
+import {
+  getOrCreateConversation,
+  resetConversation,
+  addMessage,
+  updateConversation,
+  createConversation,
+} from "@/lib/conversation";
+import {
+  processMessage,
+  buildDeckFromConversation,
+} from "@/lib/conversation-engine";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com").trim().replace(/\/$/, "");
+const BASE_URL = (
+  process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com"
+)
+  .trim()
+  .replace(/\/$/, "");
 
-async function handleDeckRequest(chatId: number, prompt: string) {
+// ============================================
+// COMMAND HANDLERS
+// ============================================
+
+async function handleStart(chatId: number): Promise<void> {
+  // Reset any existing conversation and start fresh
+  await resetConversation(String(chatId));
+
+  await sendMessage(
+    chatId,
+    `🎤 <b>Welcome to SpeakToSlides!</b>\n\n` +
+      `I'm your presentation coach. Tell me what you need to present, and I'll help you build a great deck.\n\n` +
+      `<b>How it works:</b>\n` +
+      `1️⃣ Tell me about your presentation\n` +
+      `2️⃣ I'll ask a few questions to get it right\n` +
+      `3️⃣ We'll agree on a structure\n` +
+      `4️⃣ I'll build it — you get a shareable link\n` +
+      `5️⃣ Want changes? Just tell me — I'll update the same link\n\n` +
+      `<b>Commands:</b>\n` +
+      `/new — Start a fresh deck\n` +
+      `/outline — Show current planned structure\n` +
+      `/build — Force build with current outline\n` +
+      `/reset — Clear current conversation\n\n` +
+      `Ready? Just tell me what you need to present! 🎯`
+  );
+}
+
+async function handleNew(chatId: number): Promise<void> {
+  await resetConversation(String(chatId));
+  await sendMessage(
+    chatId,
+    "🆕 Fresh start! What presentation are you working on?"
+  );
+}
+
+async function handleOutline(chatId: number): Promise<void> {
+  const conv = await getOrCreateConversation(String(chatId));
+
+  if (!conv.outline) {
+    await sendMessage(
+      chatId,
+      "📋 No outline yet — we're still planning. Tell me more about your presentation!"
+    );
+    return;
+  }
+
+  const outlineText = conv.outline.slides
+    .map((s) => {
+      const emoji =
+        s.type === "title"
+          ? "🎯"
+          : s.type === "bullets"
+            ? "📋"
+            : s.type === "stats"
+              ? "📊"
+              : s.type === "quote"
+                ? "💬"
+                : s.type === "image"
+                  ? "🖼️"
+                  : "📝";
+      return `${emoji} Slide ${s.index}: ${s.heading}`;
+    })
+    .join("\n");
+
+  await sendMessage(
+    chatId,
+    `📊 <b>Current outline: ${conv.outline.title}</b>\n\n${outlineText}\n\n` +
+      `Want to adjust anything? Or send /build to generate the deck.`
+  );
+}
+
+async function handleBuild(chatId: number): Promise<void> {
+  const conv = await getOrCreateConversation(String(chatId));
+
+  if (conv.state === "building") {
+    await sendMessage(chatId, "⏳ Already building — hang tight!");
+    return;
+  }
+
+  if (conv.messages.length === 0) {
+    await sendMessage(
+      chatId,
+      "I need to know what you're presenting first! Tell me about it."
+    );
+    return;
+  }
+
+  // Check usage limits
+  const userId = `tg_${chatId}`;
+  const usageCheck = await checkAndRecordUsage(null, userId);
+  if (!usageCheck.allowed) {
+    await sendMessage(
+      chatId,
+      `⚠️ <b>Free tier limit reached</b>\n\nVisit ${BASE_URL} to unlock more decks.`
+    );
+    return;
+  }
+
+  await buildAndSendDeck(chatId, conv);
+}
+
+async function handleReset(chatId: number): Promise<void> {
+  await resetConversation(String(chatId));
+  await sendMessage(chatId, "🗑 Conversation cleared. Ready when you are!");
+}
+
+// ============================================
+// MAIN MESSAGE HANDLER
+// ============================================
+
+async function handleTextMessage(
+  chatId: number,
+  text: string
+): Promise<void> {
   await sendChatAction(chatId, "typing");
-  await sendMessage(chatId, "🎨 Building your deck...");
 
   try {
-    // Fail fast if API key is missing
-    const apiKey = requireEnv("ANTHROPIC_API_KEY");
-    const client = new Anthropic({ apiKey });
+    const conv = await getOrCreateConversation(String(chatId));
 
-    // Use Telegram chatId as stable user identifier (server-side, trusted)
-    const userId = `tg_${chatId}`;
-    const usageCheck = await checkAndRecordUsage(null, userId);
+    // Add user message to conversation
+    const updatedConv = await addMessage(conv, "user", text);
 
-    if (!usageCheck.allowed) {
-      await sendMessage(
-        chatId,
-        `⚠️ <b>Free tier limit reached</b>\n\nYou've used your free deck. Visit ${BASE_URL} to unlock more.`
-      );
+    // Process through conversation engine
+    const result = await processMessage(updatedConv, text);
+
+    // Update state if changed
+    if (result.newState) {
+      await updateConversation(updatedConv.id, {
+        state: result.newState,
+        ...(result.outline ? { outline: result.outline } : {}),
+      });
+    }
+
+    // If we should build, do it
+    if (result.shouldBuild) {
+      // Check usage limits first
+      const userId = `tg_${chatId}`;
+      const usageCheck = await checkAndRecordUsage(null, userId);
+      if (!usageCheck.allowed) {
+        await sendMessage(
+          chatId,
+          `⚠️ <b>Free tier limit reached</b>\n\nVisit ${BASE_URL} to unlock more decks.`
+        );
+        return;
+      }
+
+      // Send the confirmation reply first
+      if (result.reply) {
+        await sendMessage(chatId, result.reply);
+      }
+
+      // Fetch the latest conversation state (with outline)
+      const latestConv = await getOrCreateConversation(String(chatId));
+      await buildAndSendDeck(chatId, latestConv);
       return;
     }
 
-    // Generate with Claude Haiku (free tier)
-    const message = await client.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 4096,
-      system: DECK_SYSTEM_PROMPT_SHORT,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const rawContent =
-      message.content[0].type === "text" ? message.content[0].text : "";
-    const deckJson = parseDeckJSON(rawContent);
-    const htmlContent = renderDeckToHTML(deckJson);
-
-    const deck = await createDeck({
-      userId,
-      title: deckJson.title,
-      prompt,
-      htmlContent,
-      slideCount: deckJson.slides.length,
-      theme: deckJson.theme || "modern",
-    });
-
-    const deckUrl = `${BASE_URL}/d/${deck.id}`;
-
-    await sendMessage(
-      chatId,
-      `✅ <b>Your deck is ready!</b>\n\n` +
-        `📊 <b>${deckJson.title}</b>\n` +
-        `🎞 ${deckJson.slides.length} slides\n\n` +
-        `🔗 ${deckUrl}\n\n` +
-        `Open the link to present — works on any screen with keyboard navigation, fullscreen, and touch swipe!`
-    );
+    // Send AI reply
+    if (result.reply) {
+      // Add assistant message to conversation
+      await addMessage(updatedConv, "assistant", result.reply);
+      await sendMessage(chatId, result.reply);
+    }
   } catch (error) {
-    console.error("Telegram deck generation error:", error);
+    console.error("Conversation error:", error);
 
-    if (error instanceof Error && error.message.includes("Missing required env var")) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Missing required env var")
+    ) {
       await sendMessage(
         chatId,
         "⚠️ Service is temporarily unavailable. Please try again later."
@@ -79,10 +203,109 @@ async function handleDeckRequest(chatId: number, prompt: string) {
 
     await sendMessage(
       chatId,
-      "❌ Failed to generate your deck. Please try again with a different prompt."
+      "❌ Something went wrong. Try again, or send /new to start fresh."
     );
   }
 }
+
+// ============================================
+// DECK BUILDING
+// ============================================
+
+async function buildAndSendDeck(
+  chatId: number,
+  conv: Awaited<ReturnType<typeof getOrCreateConversation>>
+): Promise<void> {
+  // Mark as building
+  await updateConversation(conv.id, { state: "building" });
+  await sendMessage(chatId, "🎨 Building your deck...");
+  await sendChatAction(chatId, "typing");
+
+  try {
+    const deckResult = await buildDeckFromConversation(conv);
+
+    // Link deck to conversation and move to reviewing
+    await updateConversation(conv.id, {
+      state: "reviewing",
+      deck_id: deckResult.deckId,
+    });
+
+    await sendMessage(
+      chatId,
+      `✅ <b>Your deck is ready!</b>\n\n` +
+        `📊 <b>${deckResult.title}</b>\n` +
+        `🎞 ${deckResult.slideCount} slides\n\n` +
+        `🔗 ${deckResult.deckUrl}\n\n` +
+        `Open the link to present — keyboard nav, fullscreen, and touch swipe!\n\n` +
+        `💡 <b>Want changes?</b> Just tell me — e.g. "change slide 3" or "add a slide about X". Same link, instant update.`
+    );
+
+    // Add the deck message to conversation history
+    await addMessage(
+      conv,
+      "assistant",
+      `Deck ready: ${deckResult.title} (${deckResult.slideCount} slides) — ${deckResult.deckUrl}`
+    );
+  } catch (error) {
+    console.error("Deck build error:", error);
+
+    // Revert to confirming state so they can try again
+    await updateConversation(conv.id, { state: "confirming" });
+
+    await sendMessage(
+      chatId,
+      "❌ Failed to generate the deck. Send /build to try again, or tell me what to adjust."
+    );
+  }
+}
+
+// ============================================
+// VOICE HANDLER
+// ============================================
+
+async function handleVoice(chatId: number, fileId: string): Promise<void> {
+  const openAiKey = process.env.OPENAI_API_KEY;
+  if (!openAiKey) {
+    await sendMessage(
+      chatId,
+      "🎤 Voice transcription is not available right now. Please type your request instead!"
+    );
+    return;
+  }
+
+  await sendChatAction(chatId, "typing");
+  await sendMessage(chatId, "🎤 Transcribing your voice message...");
+
+  try {
+    const transcribedText = await transcribeVoice(fileId);
+
+    if (!transcribedText || transcribedText.trim().length === 0) {
+      await sendMessage(
+        chatId,
+        "❌ Could not understand the voice message. Please try again or type your request."
+      );
+      return;
+    }
+
+    await sendMessage(
+      chatId,
+      `💬 I heard: "<i>${transcribedText}</i>"`
+    );
+
+    // Process the transcribed text through the conversation engine
+    await handleTextMessage(chatId, transcribedText);
+  } catch (err) {
+    console.error("Voice transcription error:", err);
+    await sendMessage(
+      chatId,
+      "❌ Failed to process voice message. Please type your request instead."
+    );
+  }
+}
+
+// ============================================
+// WEBHOOK ENTRY POINT
+// ============================================
 
 export async function POST(req: NextRequest) {
   try {
@@ -100,80 +323,53 @@ export async function POST(req: NextRequest) {
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim();
 
-    // Handle /start command
+    // Handle commands
     if (text === "/start") {
-      await sendMessage(
-        chatId,
-        `🎤 <b>Welcome to SpeakToSlides!</b>\n\n` +
-          `Turn your ideas into beautiful presentations instantly.\n\n` +
-          `<b>How to use:</b>\n` +
-          `💬 Type your topic — e.g. "Build me a deck on why AI is changing healthcare"\n` +
-          `🎤 Send a voice note describing your presentation\n\n` +
-          `<b>Free tier:</b> 1 deck per user\n` +
-          `<b>Pro:</b> Unlimited decks at ${BASE_URL}\n\n` +
-          `Ready? Just tell me what deck you need!`
-      );
+      await handleStart(chatId);
       return NextResponse.json({ ok: true });
     }
-
-    // Handle /help command
+    if (text === "/new") {
+      await handleNew(chatId);
+      return NextResponse.json({ ok: true });
+    }
+    if (text === "/outline") {
+      await handleOutline(chatId);
+      return NextResponse.json({ ok: true });
+    }
+    if (text === "/build") {
+      await handleBuild(chatId);
+      return NextResponse.json({ ok: true });
+    }
+    if (text === "/reset") {
+      await handleReset(chatId);
+      return NextResponse.json({ ok: true });
+    }
     if (text === "/help") {
       await sendMessage(
         chatId,
         `<b>SpeakToSlides Help</b>\n\n` +
-          `Just describe the presentation you want:\n` +
-          `• "10 slides on the future of electric vehicles"\n` +
-          `• "Startup pitch deck for a food delivery app"\n` +
-          `• "Quarterly results presentation for our team"\n\n` +
-          `Or send a <b>voice message</b> and I'll transcribe it!\n\n` +
-          `Each deck gets a permanent shareable link you can open on any screen.`
+          `Just describe the presentation you want — I'll ask questions to get it right, then build it for you.\n\n` +
+          `<b>Commands:</b>\n` +
+          `/new — Start a fresh conversation\n` +
+          `/outline — Show current planned structure\n` +
+          `/build — Force build with current outline\n` +
+          `/reset — Clear conversation\n` +
+          `/help — This message\n\n` +
+          `<b>Editing:</b>\nAfter your deck is built, just tell me what to change — "fix slide 3", "add a slide about X", "change the title". Same link, instant update!\n\n` +
+          `🎤 You can also send <b>voice messages</b> — I'll transcribe and use them.`
       );
       return NextResponse.json({ ok: true });
     }
 
     // Handle voice messages
     if (update.message.voice) {
-      // Check OPENAI_API_KEY before attempting transcription
-      const openAiKey = process.env.OPENAI_API_KEY;
-      if (!openAiKey) {
-        await sendMessage(
-          chatId,
-          "🎤 Voice transcription is not available right now. Please type your request instead!"
-        );
-        return NextResponse.json({ ok: true });
-      }
-
-      const voice = update.message.voice;
-      await sendChatAction(chatId, "typing");
-      await sendMessage(chatId, "🎤 Transcribing your voice message...");
-
-      try {
-        const transcribedText = await transcribeVoice(voice.file_id);
-
-        if (!transcribedText || transcribedText.trim().length === 0) {
-          await sendMessage(
-            chatId,
-            "❌ Could not understand the voice message. Please try again or type your request."
-          );
-          return NextResponse.json({ ok: true });
-        }
-
-        await sendMessage(chatId, `💬 I heard: "<i>${transcribedText}</i>"\n\nGenerating your deck...`);
-        await handleDeckRequest(chatId, transcribedText);
-      } catch (err) {
-        console.error("Voice transcription error:", err);
-        await sendMessage(
-          chatId,
-          "❌ Failed to process voice message. Please type your request instead."
-        );
-      }
-
+      await handleVoice(chatId, update.message.voice.file_id);
       return NextResponse.json({ ok: true });
     }
 
-    // Handle text messages (deck generation)
-    if (text && text.length > 3 && !text.startsWith("/")) {
-      await handleDeckRequest(chatId, text);
+    // Handle text messages (conversation flow)
+    if (text && text.length > 2 && !text.startsWith("/")) {
+      await handleTextMessage(chatId, text);
     }
 
     return NextResponse.json({ ok: true });

@@ -1,38 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { createDeck, checkAndRecordUsage } from "@/lib/supabase";
-import { renderDeckToHTML, parseDeckJSON, DeckJSON } from "@/lib/deck-renderer";
-import { requireEnv } from "@/lib/env";
-import { DECK_SYSTEM_PROMPT } from "@/lib/deck-prompts";
-
-async function generateDeck(
-  prompt: string,
-  isPro: boolean = false
-): Promise<{ deckJson: DeckJSON; rawContent: string }> {
-  // Fail fast if API key is missing
-  const apiKey = requireEnv("ANTHROPIC_API_KEY");
-  const client = new Anthropic({ apiKey });
-
-  const model = isPro ? "claude-sonnet-4-20250514" : "claude-3-haiku-20240307";
-
-  const message = await client.messages.create({
-    model,
-    max_tokens: 4096,
-    system: DECK_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  });
-
-  const rawContent =
-    message.content[0].type === "text" ? message.content[0].text : "";
-
-  const deckJson = parseDeckJSON(rawContent);
-  return { deckJson, rawContent };
-}
+import { checkAndRecordUsage } from "@/lib/supabase";
+import { generateDeck, createDeckWithSlides } from "@/lib/deck-generator";
+import { renderDeckToHTML } from "@/lib/deck-renderer";
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,7 +33,6 @@ export async function POST(req: NextRequest) {
 
     // SECURITY: Do NOT accept userId from the request body (untrusted client input).
     // Rate limit all web requests by IP only.
-    // The Telegram bot uses /api/telegram (server-side) and manages its own userId.
     const usageCheck = await checkAndRecordUsage(ipAddress, null);
     if (!usageCheck.allowed) {
       return NextResponse.json(
@@ -73,25 +41,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate deck with Claude (free tier = Haiku, pro = Sonnet)
+    // Generate deck with shared generator (free tier = Haiku)
     const { deckJson } = await generateDeck(prompt.trim(), false);
-
-    // Render to self-contained HTML
     const htmlContent = renderDeckToHTML(deckJson);
 
-    // Store in Supabase
-    const deck = await createDeck({
+    // Store in Supabase (with slides_json for future editing)
+    const deck = await createDeckWithSlides({
       userId: null,
       title: deckJson.title,
       prompt: prompt.trim(),
       htmlContent,
+      slidesJson: deckJson.slides,
       slideCount: deckJson.slides.length,
       theme: deckJson.theme || "modern",
     });
 
     const baseUrl = (
       process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com"
-    ).trim().replace(/\/$/, "");
+    )
+      .trim()
+      .replace(/\/$/, "");
     const deckUrl = `${baseUrl}/d/${deck.id}`;
 
     return NextResponse.json({
@@ -104,7 +73,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("generate-deck error:", error);
 
-    if (error instanceof Error && error.message.includes("Missing required env var")) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Missing required env var")
+    ) {
       return NextResponse.json(
         { error: "Service not configured. Please try again later." },
         { status: 503 }
