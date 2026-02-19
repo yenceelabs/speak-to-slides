@@ -168,7 +168,7 @@ function renderSlide(slide: Slide, index: number, total: number, colors: ReturnT
   }
 }
 
-export function renderDeckToHTML(deckJson: DeckJSON): string {
+export function renderDeckToHTML(deckJson: DeckJSON, isPro = false): string {
   const theme = deckJson.theme || "modern";
   const colors = getThemeColors(theme);
   const { bg, surface, accent, text, textMuted, border } = colors;
@@ -236,10 +236,16 @@ export function renderDeckToHTML(deckJson: DeckJSON): string {
   
   /* Watermark */
   #watermark {
-    position:fixed; top:16px; left:16px; z-index:100;
-    font-size:0.75rem; color:${textMuted}; opacity:0.5;
-    font-weight:500;
+    position:fixed; bottom:16px; right:16px; z-index:100;
+    font-size:0.72rem; color:${textMuted}; opacity:0.6;
+    font-weight:500; letter-spacing:0.01em;
+    background:rgba(0,0,0,0.35); backdrop-filter:blur(6px);
+    padding:5px 10px; border-radius:6px;
+    border:1px solid ${border};
+    text-decoration:none; display:block;
+    transition:opacity 0.2s;
   }
+  #watermark:hover { opacity:1; }
   
   /* Transition */
   .slide { animation:fadeIn 0.3s ease; }
@@ -262,7 +268,7 @@ export function renderDeckToHTML(deckJson: DeckJSON): string {
 <body>
 
 <div id="progress"></div>
-<div id="watermark">SpeakToSlides</div>
+${isPro ? "" : '<a id="watermark" href="https://speaktoslides.com" target="_blank" rel="noopener noreferrer">Made with speaktoslides.com</a>'}
 <button id="fs-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 
 <div id="deck">

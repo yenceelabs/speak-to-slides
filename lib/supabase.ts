@@ -47,6 +47,7 @@ export interface Deck {
   slide_count: number;
   theme: string;
   is_public: boolean;
+  is_pro: boolean;
   view_count: number;
   created_at: string;
 }

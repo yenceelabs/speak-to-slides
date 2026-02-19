@@ -231,7 +231,8 @@ async function handleReviewPhase(
       await updateDeckSlides(
         conversation.deck_id,
         updatedSlides,
-        deckData.theme
+        deckData.theme,
+        false // isPro: TODO check subscription when payments ship
       );
 
       const deckUrl = `${BASE_URL}/d/${conversation.deck_id}`;
@@ -267,8 +268,9 @@ export async function buildDeckFromConversation(
   // Build a comprehensive prompt from conversation history
   const prompt = buildGenerationPrompt(conversation);
 
-  const { deckJson } = await generateDeck(prompt, false);
-  const htmlContent = renderDeckToHTML(deckJson);
+  const isPro = false; // TODO: check subscription when payments ship
+  const { deckJson } = await generateDeck(prompt, isPro);
+  const htmlContent = renderDeckToHTML(deckJson, isPro);
 
   const userId = `tg_${conversation.chat_id}`;
 
@@ -281,6 +283,7 @@ export async function buildDeckFromConversation(
     slideCount: deckJson.slides.length,
     theme: deckJson.theme || "modern",
     conversationId: conversation.id,
+    isPro,
   });
 
   const deckUrl = `${BASE_URL}/d/${deck.id}`;

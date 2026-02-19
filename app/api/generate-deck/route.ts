@@ -48,9 +48,10 @@ export async function POST(req: NextRequest) {
       prompt_length: prompt.trim().length,
     });
 
-    // Generate deck with shared generator (free tier = Haiku)
-    const { deckJson } = await generateDeck(prompt.trim(), false);
-    const htmlContent = renderDeckToHTML(deckJson);
+    // Generate deck with shared generator (free tier = Haiku, no pro)
+    const isPro = false; // TODO: check Clerk userId + subscription when payments ship
+    const { deckJson } = await generateDeck(prompt.trim(), isPro);
+    const htmlContent = renderDeckToHTML(deckJson, isPro);
 
     // Store in Supabase (with slides_json for future editing)
     const deck = await createDeckWithSlides({
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       slidesJson: deckJson.slides,
       slideCount: deckJson.slides.length,
       theme: deckJson.theme || "modern",
+      isPro,
     });
 
     const baseUrl = (

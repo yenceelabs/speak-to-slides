@@ -165,6 +165,7 @@ export async function createDeckWithSlides(params: {
   slideCount: number;
   theme: string;
   conversationId?: string | null;
+  isPro?: boolean;
 }): Promise<{ id: string }> {
   const db = getSupabase();
 
@@ -180,6 +181,7 @@ export async function createDeckWithSlides(params: {
       theme: params.theme,
       is_public: true,
       conversation_id: params.conversationId || null,
+      is_pro: params.isPro ?? false,
     })
     .select("id")
     .single();
@@ -195,7 +197,8 @@ export async function createDeckWithSlides(params: {
 export async function updateDeckSlides(
   deckId: string,
   updatedSlides: Slide[],
-  theme: string = "modern"
+  theme: string = "modern",
+  isPro = false
 ): Promise<void> {
   const db = getSupabase();
 
@@ -211,7 +214,7 @@ export async function updateDeckSlides(
     deckJson.title = titleSlide.heading;
   }
 
-  const htmlContent = renderDeckToHTML(deckJson);
+  const htmlContent = renderDeckToHTML(deckJson, isPro);
 
   const { error } = await db
     .from("speaktoslides_decks")
