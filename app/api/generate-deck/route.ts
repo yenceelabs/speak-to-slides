@@ -40,7 +40,7 @@ async function generateDeck(
   prompt: string,
   isPro: boolean = false
 ): Promise<{ deckJson: DeckJSON; rawContent: string }> {
-  const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-20250514";
+  const model = isPro ? "claude-sonnet-4-20250514" : "claude-3-haiku-20240307";
 
   const message = await client.messages.create({
     model,

@@ -55,7 +55,7 @@ async function handleDeckRequest(chatId: number, prompt: string) {
 
     // Generate with Claude Haiku (free tier)
     const message = await client.messages.create({
-      model: "claude-haiku-4-20250514",
+      model: "claude-3-haiku-20240307",
       max_tokens: 4096,
       system: DECK_SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }],
