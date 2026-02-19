@@ -354,5 +354,19 @@ export function parseDeckJSON(rawContent: string): DeckJSON {
   if (clean.startsWith("```")) {
     clean = clean.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
   }
-  return JSON.parse(clean);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(clean);
+  } catch (e) {
+    console.error("parseDeckJSON: AI returned non-JSON. First 300 chars:", clean.slice(0, 300));
+    throw new Error("AI returned invalid JSON for deck. This is a temporary issue — please try again.");
+  }
+
+  // Basic shape validation
+  if (typeof parsed !== "object" || parsed === null || !Array.isArray((parsed as DeckJSON).slides)) {
+    throw new Error("AI returned unexpected structure for deck. Expected { slides: [...] }.");
+  }
+
+  return parsed as DeckJSON;
 }
