@@ -7,6 +7,10 @@ import {
   Slide,
 } from "./deck-renderer";
 import { getSupabase } from "./supabase";
+import {
+  VISUAL_DESIGN_INSTRUCTIONS,
+  getTemplatePromptSection,
+} from "./slide-patterns";
 
 // ============================================
 // PROMPTS
@@ -38,7 +42,9 @@ Rules:
 - For bullets: max 5 points per slide, each under 15 words
 - For stats: use real or realistic statistics when possible
 - Choose theme based on content: modern for tech, minimal for business, bold for creative/marketing
-- The title should be a clean, professional title`;
+- The title should be a clean, professional title
+${VISUAL_DESIGN_INSTRUCTIONS}
+${getTemplatePromptSection()}`;
 
 const EDIT_SYSTEM_PROMPT = `You are a professional presentation designer editing an existing deck. The user wants changes to specific slides.
 

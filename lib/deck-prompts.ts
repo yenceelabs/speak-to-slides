@@ -1,7 +1,19 @@
 /**
  * Shared deck generation prompts.
  * Single source of truth — used by both web and Telegram routes.
+ *
+ * Visual design instructions and reference templates are imported from
+ * lib/slide-patterns.ts so the AI produces visually rich HTML slides.
  */
+
+import {
+  VISUAL_DESIGN_INSTRUCTIONS,
+  getTemplatePromptSection,
+} from "./slide-patterns";
+
+// ---------------------------------------------------------------------------
+// Full system prompt — web UI (no token budget constraint)
+// ---------------------------------------------------------------------------
 
 export const DECK_SYSTEM_PROMPT = `You are a professional presentation designer. Convert the user's request into a beautiful, engaging presentation.
 
@@ -32,7 +44,10 @@ Rules:
 - Choose theme based on content: modern for tech, minimal for business, bold for creative/marketing
 - The title in the JSON should be a clean, professional title (not "Create a deck about...")`;
 
-// Condensed prompt for Telegram (saves tokens, mobile use-case)
+// ---------------------------------------------------------------------------
+// Condensed prompt — Telegram (saves tokens, mobile use-case)
+// ---------------------------------------------------------------------------
+
 export const DECK_SYSTEM_PROMPT_SHORT = `You are a professional presentation designer. Convert the user's request into a beautiful, engaging presentation.
 
 Output ONLY valid JSON in this exact format (no markdown, no explanation):
