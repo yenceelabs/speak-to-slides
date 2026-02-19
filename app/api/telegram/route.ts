@@ -6,6 +6,7 @@ import {
   transcribeVoice,
   getFile,
 } from "@/lib/telegram";
+import { trackServer, Events } from "@/lib/posthog";
 import { checkAndRecordUsage } from "@/lib/supabase";
 import {
   getOrCreateConversation,
@@ -116,6 +117,7 @@ async function handleBuild(chatId: number): Promise<void> {
   const userId = `tg_${chatId}`;
   const usageCheck = await checkAndRecordUsage(null, userId);
   if (!usageCheck.allowed) {
+    await trackServer(userId, Events.FREE_LIMIT_HIT, { channel: 'telegram' });
     await sendMessage(
       chatId,
       `⚠️ <b>Free tier limit reached</b>\n\nVisit ${BASE_URL} to unlock more decks.`
@@ -225,6 +227,13 @@ async function buildAndSendDeck(
   try {
     const deckResult = await buildDeckFromConversation(conv);
 
+    // Track deck created via Telegram
+    await trackServer(`tg_${chatId}`, Events.DECK_CREATED, {
+      deck_id: deckResult.deckId,
+      slide_count: deckResult.slideCount,
+      channel: 'telegram',
+    });
+
     // Link deck to conversation and move to reviewing
     await updateConversation(conv.id, {
       state: "reviewing",
@@ -287,6 +296,11 @@ async function handleVoice(chatId: number, fileId: string): Promise<void> {
       );
       return;
     }
+
+    // Track successful voice transcription
+    await trackServer(`tg_${chatId}`, Events.VOICE_TRANSCRIBED, {
+      text_length: transcribedText.trim().length,
+    });
 
     await sendMessage(
       chatId,
@@ -384,6 +398,13 @@ async function handlePhoto(chatId: number, fileId: string, caption?: string): Pr
     );
     return;
   }
+
+  // Track image upload
+  await trackServer(`tg_${chatId}`, Events.IMAGE_UPLOADED, {
+    deck_id: conv.deck_id,
+    slide_index: slideIndex,
+    channel: 'telegram',
+  });
 
   const deckUrl = `${baseUrl}/d/${conv.deck_id}`;
   await sendMessage(

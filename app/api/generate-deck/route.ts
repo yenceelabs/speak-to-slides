@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkAndRecordUsage } from "@/lib/supabase";
 import { generateDeck, createDeckWithSlides } from "@/lib/deck-generator";
 import { renderDeckToHTML } from "@/lib/deck-renderer";
+import { trackServer, Events } from "@/lib/posthog";
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,11 +36,17 @@ export async function POST(req: NextRequest) {
     // Rate limit all web requests by IP only.
     const usageCheck = await checkAndRecordUsage(ipAddress, null);
     if (!usageCheck.allowed) {
+      await trackServer(ipAddress || 'anon', Events.FREE_LIMIT_HIT, { channel: 'web' });
       return NextResponse.json(
         { error: usageCheck.reason || "Usage limit reached" },
         { status: 429 }
       );
     }
+
+    // Track prompt sent
+    await trackServer(ipAddress || 'anon', Events.WEB_PROMPT_SENT, {
+      prompt_length: prompt.trim().length,
+    });
 
     // Generate deck with shared generator (free tier = Haiku)
     const { deckJson } = await generateDeck(prompt.trim(), false);
@@ -62,6 +69,14 @@ export async function POST(req: NextRequest) {
       .trim()
       .replace(/\/$/, "");
     const deckUrl = `${baseUrl}/d/${deck.id}`;
+
+    // Track deck created
+    await trackServer(ipAddress || 'anon', Events.DECK_CREATED, {
+      deck_id: deck.id,
+      slide_count: deckJson.slides.length,
+      theme: deckJson.theme,
+      channel: 'web',
+    });
 
     return NextResponse.json({
       deckId: deck.id,
