@@ -43,13 +43,18 @@ export default async function DeckPage({ params }: Props) {
   }
 
   // Check if current user is the deck owner
-  const { userId } = await auth();
+  let userId: string | null = null;
+  try {
+    const authState = await auth();
+    userId = authState.userId;
+  } catch (authError) {
+    console.warn("Clerk auth unavailable on deck page:", authError);
+  }
   const isOwner = !!(userId && deck.user_id && userId === deck.user_id);
 
   return (
     <DeckViewer
       deckId={deck.id}
-      htmlContent={deck.html_content}
       slideCount={deck.slide_count}
       isOwner={isOwner}
     />

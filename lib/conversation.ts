@@ -140,9 +140,30 @@ export async function addMessage(
   role: "user" | "assistant",
   content: string
 ): Promise<Conversation> {
+  const db = getSupabase();
+  const timestamp = Date.now();
+
+  // Prefer DB-side append to avoid race conditions from read-modify-write updates.
+  const { data, error } = await db.rpc("append_conversation_message", {
+    p_conversation_id: conversation.id,
+    p_role: role,
+    p_content: content,
+    p_timestamp: timestamp,
+  });
+
+  if (!error) {
+    const updated = Array.isArray(data) ? data[0] : data;
+    if (updated && typeof updated === "object") {
+      return updated as Conversation;
+    }
+  } else if (error.code !== "PGRST202") {
+    throw error;
+  }
+
+  // Fallback path if migration hasn't been applied yet.
   const messages = [
     ...conversation.messages,
-    { role, content, timestamp: Date.now() },
+    { role, content, timestamp },
   ];
 
   return updateConversation(conversation.id, { messages });

@@ -4,7 +4,6 @@ import { useRef, useState, useCallback, useEffect } from "react";
 
 interface Props {
   deckId: string;
-  htmlContent: string;
   slideCount: number;
   isOwner?: boolean;
 }
@@ -16,7 +15,7 @@ interface UploadState {
   error?: string;
 }
 
-export default function DeckViewer({ deckId, htmlContent, slideCount, isOwner = false }: Props) {
+export default function DeckViewer({ deckId, slideCount, isOwner = false }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUploadPanel, setShowUploadPanel] = useState(false);
@@ -24,11 +23,11 @@ export default function DeckViewer({ deckId, htmlContent, slideCount, isOwner = 
   const [uploadState, setUploadState] = useState<UploadState>({ slideIndex: 0, status: "idle" });
   const [isDragging, setIsDragging] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [freshHtml, setFreshHtml] = useState(htmlContent);
 
   // Listen for slide changes from the iframe
   useEffect(() => {
     const handler = (e: MessageEvent) => {
+      if (e.source !== iframeRef.current?.contentWindow) return;
       if (e.data?.type === "slideChange") {
         setCurrentSlide(e.data.index);
         setSelectedSlide(e.data.index);
@@ -96,10 +95,6 @@ export default function DeckViewer({ deckId, htmlContent, slideCount, isOwner = 
 
   const slideNumbers = Array.from({ length: slideCount }, (_, i) => i);
 
-  // We serve the deck HTML in an iframe so its JS runs cleanly
-  // Build a data URL so the iframe gets the latest HTML
-  const iframeSrc = `/d/${deckId}/frame`;
-
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", background: "#0f172a", overflow: "hidden", position: "relative" }}>
       {/* Deck iframe — fills viewport */}
@@ -109,6 +104,8 @@ export default function DeckViewer({ deckId, htmlContent, slideCount, isOwner = 
           src={`/d/${deckId}/frame`}
           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
           title="Presentation"
+          sandbox="allow-scripts allow-pointer-lock allow-presentation allow-popups"
+          allowFullScreen
         />
       </div>
 

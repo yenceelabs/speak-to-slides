@@ -44,10 +44,12 @@ export interface Deck {
   title: string;
   prompt: string;
   html_content: string;
+  slides_json?: unknown;
   slide_count: number;
   theme: string;
   is_public: boolean;
   is_pro: boolean;
+  conversation_id?: string | null;
   view_count: number;
   created_at: string;
 }
@@ -104,18 +106,12 @@ export async function getDeckById(id: string): Promise<Deck | null> {
 }
 
 export async function incrementViewCount(id: string): Promise<void> {
-  await supabase
-    .from("speaktoslides_decks")
-    .update({ view_count: supabase.from("speaktoslides_decks") })
-    .eq("id", id);
-
-  // Use RPC or manual increment
-  const deck = await getDeckById(id);
-  if (deck) {
-    await supabase
-      .from("speaktoslides_decks")
-      .update({ view_count: (deck.view_count || 0) + 1 })
-      .eq("id", id);
+  const db = getSupabase();
+  const { error } = await db.rpc("increment_deck_view_count", {
+    p_deck_id: id,
+  });
+  if (error) {
+    throw error;
   }
 }
 
@@ -174,7 +170,7 @@ export async function checkAndRecordUsage(
       return {
         allowed: false,
         reason:
-          "Free tier limit reached. Sign in to create more decks.",
+          "Free tier limit reached for this network. Please try again later.",
       };
     }
 

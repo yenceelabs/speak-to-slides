@@ -270,7 +270,7 @@ export default function HomePage() {
             {
               icon: "🖼️",
               title: "Add your own images",
-              desc: "Drag & drop images onto any slide from the web, or send a photo via the Telegram bot.",
+              desc: "Owners can drag & drop images onto slides on web, or send a photo via the Telegram bot.",
             },
             {
               icon: "📱",
@@ -285,7 +285,7 @@ export default function HomePage() {
             {
               icon: "🌐",
               title: "No sign-up needed",
-              desc: "First deck is free with no account. Sign in to create unlimited decks.",
+              desc: "Generate your first deck with no account required.",
             },
           ].map(({ icon, title, desc }) => (
             <div

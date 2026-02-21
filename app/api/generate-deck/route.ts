@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isIP } from "node:net";
+import { auth } from "@clerk/nextjs/server";
 import { checkAndRecordUsage } from "@/lib/supabase";
 import { generateDeck, createDeckWithSlides } from "@/lib/deck-generator";
 import { renderDeckToHTML } from "@/lib/deck-renderer";
 import { trackServer, Events } from "@/lib/posthog";
+
+function getClientIp(req: NextRequest): string | null {
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp && isIP(realIp)) {
+    return realIp;
+  }
+
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (!forwardedFor) return null;
+
+  const firstValid = forwardedFor
+    .split(",")
+    .map((ip) => ip.trim())
+    .find((ip) => Boolean(ip) && isIP(ip));
+
+  return firstValid || null;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,16 +46,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Get IP for rate limiting
-    const forwardedFor = req.headers.get("x-forwarded-for");
-    const ipAddress = forwardedFor
-      ? forwardedFor.split(",")[0].trim()
-      : req.headers.get("x-real-ip") || null;
+    const ipAddress = getClientIp(req);
 
-    // SECURITY: Do NOT accept userId from the request body (untrusted client input).
-    // Rate limit all web requests by IP only.
-    const usageCheck = await checkAndRecordUsage(ipAddress, null);
+    // SECURITY: user identity comes from server-side auth, not request body.
+    let userId: string | null = null;
+    try {
+      const authState = await auth();
+      userId = authState.userId;
+    } catch (authError) {
+      // Keep anonymous flow working even when Clerk isn't configured in a given env.
+      console.warn("Clerk auth unavailable in generate-deck route:", authError);
+    }
+    const usageCheck = await checkAndRecordUsage(ipAddress, userId || null);
     if (!usageCheck.allowed) {
-      await trackServer(ipAddress || 'anon', Events.FREE_LIMIT_HIT, { channel: 'web' });
+      await trackServer(userId || ipAddress || "anon", Events.FREE_LIMIT_HIT, {
+        channel: "web",
+      });
       return NextResponse.json(
         { error: usageCheck.reason || "Usage limit reached" },
         { status: 429 }
@@ -44,7 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Track prompt sent
-    await trackServer(ipAddress || 'anon', Events.WEB_PROMPT_SENT, {
+    await trackServer(userId || ipAddress || "anon", Events.WEB_PROMPT_SENT, {
       prompt_length: prompt.trim().length,
     });
 
@@ -55,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     // Store in Supabase (with slides_json for future editing)
     const deck = await createDeckWithSlides({
-      userId: null,
+      userId: userId || null,
       title: deckJson.title,
       prompt: prompt.trim(),
       htmlContent,
@@ -73,11 +98,11 @@ export async function POST(req: NextRequest) {
     const deckUrl = `${baseUrl}/d/${deck.id}`;
 
     // Track deck created
-    await trackServer(ipAddress || 'anon', Events.DECK_CREATED, {
+    await trackServer(userId || ipAddress || "anon", Events.DECK_CREATED, {
       deck_id: deck.id,
       slide_count: deckJson.slides.length,
       theme: deckJson.theme,
-      channel: 'web',
+      channel: "web",
     });
 
     return NextResponse.json({

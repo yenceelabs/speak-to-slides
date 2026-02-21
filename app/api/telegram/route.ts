@@ -5,6 +5,7 @@ import {
   sendChatAction,
   transcribeVoice,
   getFile,
+  escapeTelegramHtml,
 } from "@/lib/telegram";
 import { trackServer, Events } from "@/lib/posthog";
 import { checkAndRecordUsage } from "@/lib/supabase";
@@ -13,7 +14,6 @@ import {
   resetConversation,
   addMessage,
   updateConversation,
-  createConversation,
 } from "@/lib/conversation";
 import {
   processMessage,
@@ -25,6 +25,8 @@ const BASE_URL = (
 )
   .trim()
   .replace(/\/$/, "");
+
+const esc = (value: string): string => escapeTelegramHtml(value);
 
 // ============================================
 // COMMAND HANDLERS
@@ -86,13 +88,13 @@ async function handleOutline(chatId: number): Promise<void> {
                 : s.type === "image"
                   ? "🖼️"
                   : "📝";
-      return `${emoji} Slide ${s.index}: ${s.heading}`;
+      return `${emoji} Slide ${s.index}: ${esc(s.heading)}`;
     })
     .join("\n");
 
   await sendMessage(
     chatId,
-    `📊 <b>Current outline: ${conv.outline.title}</b>\n\n${outlineText}\n\n` +
+    `📊 <b>Current outline: ${esc(conv.outline.title)}</b>\n\n${outlineText}\n\n` +
       `Want to adjust anything? Or send /build to generate the deck.`
   );
 }
@@ -175,7 +177,7 @@ async function handleTextMessage(
 
       // Send the confirmation reply first
       if (result.reply) {
-        await sendMessage(chatId, result.reply);
+        await sendMessage(chatId, result.reply, { parseMode: "none" });
       }
 
       // Fetch the latest conversation state (with outline)
@@ -188,7 +190,7 @@ async function handleTextMessage(
     if (result.reply) {
       // Add assistant message to conversation
       await addMessage(updatedConv, "assistant", result.reply);
-      await sendMessage(chatId, result.reply);
+      await sendMessage(chatId, result.reply, { parseMode: "none" });
     }
   } catch (error) {
     console.error("Conversation error:", error);
@@ -243,7 +245,7 @@ async function buildAndSendDeck(
     await sendMessage(
       chatId,
       `✅ <b>Your deck is ready!</b>\n\n` +
-        `📊 <b>${deckResult.title}</b>\n` +
+        `📊 <b>${esc(deckResult.title)}</b>\n` +
         `🎞 ${deckResult.slideCount} slides\n\n` +
         `🔗 ${deckResult.deckUrl}\n\n` +
         `Open the link to present — keyboard nav, fullscreen, and touch swipe!\n\n` +
@@ -304,7 +306,7 @@ async function handleVoice(chatId: number, fileId: string): Promise<void> {
 
     await sendMessage(
       chatId,
-      `💬 I heard: "<i>${transcribedText}</i>"`
+      `💬 I heard: "<i>${esc(transcribedText)}</i>"`
     );
 
     // Process the transcribed text through the conversation engine
@@ -331,7 +333,8 @@ function parseSlideIndex(caption: string | undefined): number | null {
   const match = caption.match(/slide\s*(\d+)/i) || caption.match(/^(\d+)$/);
   if (!match) return null;
   const n = parseInt(match[1], 10);
-  return isNaN(n) ? null : Math.max(0, n - 1); // convert to 0-based
+  if (isNaN(n) || n < 1) return null;
+  return n - 1; // convert to 0-based
 }
 
 async function handlePhoto(chatId: number, fileId: string, caption?: string): Promise<void> {
@@ -380,6 +383,15 @@ async function handlePhoto(chatId: number, fileId: string, caption?: string): Pr
   formData.append("deckId", conv.deck_id);
   formData.append("slideIndex", String(slideIndex));
 
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    await sendMessage(
+      chatId,
+      "❌ Image uploads are temporarily unavailable due to server configuration."
+    );
+    return;
+  }
+
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://speaktoslides.com")
     .trim()
     .replace(/\/$/, "");
@@ -387,7 +399,7 @@ async function handlePhoto(chatId: number, fileId: string, caption?: string): Pr
   const uploadRes = await fetch(`${baseUrl}/api/upload-image`, {
     method: "POST",
     headers: {
-      "x-internal-secret": process.env.INTERNAL_API_SECRET || "",
+      "x-internal-secret": internalSecret,
     },
     body: formData,
   });
@@ -397,7 +409,8 @@ async function handlePhoto(chatId: number, fileId: string, caption?: string): Pr
   if (!uploadRes.ok) {
     await sendMessage(
       chatId,
-      `❌ Failed to add image: ${uploadData.error || "Unknown error"}`
+      `❌ Failed to add image: ${uploadData.error || "Unknown error"}`,
+      { parseMode: "none" }
     );
     return;
   }

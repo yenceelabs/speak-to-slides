@@ -5,8 +5,6 @@ import {
   ConversationMessage,
   ConversationState,
   SlideOutline,
-  addMessage,
-  updateConversation,
 } from "./conversation";
 import {
   generateDeck,
@@ -314,7 +312,12 @@ function buildClaudeMessages(
       content: m.content,
     }));
 
-  messages.push({ role: "user", content: newUserMessage });
+  const lastMessage = messages[messages.length - 1];
+  const isAlreadyIncluded =
+    lastMessage?.role === "user" && lastMessage.content === newUserMessage;
+  if (!isAlreadyIncluded) {
+    messages.push({ role: "user", content: newUserMessage });
+  }
 
   // Ensure messages start with a user message (Claude requirement)
   while (messages.length > 0 && messages[0].role !== "user") {
