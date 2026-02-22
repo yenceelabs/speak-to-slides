@@ -92,7 +92,15 @@ export async function createDeck(params: {
 }
 
 export async function getDeckById(id: string): Promise<Deck | null> {
-  const { data, error } = await supabase
+  let db: SupabaseClient;
+  try {
+    db = getSupabase();
+  } catch {
+    // Supabase not configured — deck cannot exist
+    return null;
+  }
+
+  const { data, error } = await db
     .from("speaktoslides_decks")
     .select("*")
     .eq("id", id)
