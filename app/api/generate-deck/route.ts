@@ -73,8 +73,20 @@ export async function POST(req: NextRequest) {
       prompt_length: prompt.trim().length,
     });
 
-    // Generate deck with shared generator (free tier = Haiku, no pro)
-    const isPro = false; // TODO: check Clerk userId + subscription when payments ship
+    // Check Pro status via Clerk public metadata
+    let isPro = false;
+    if (userId) {
+      try {
+        const { clerkClient } = await import("@clerk/nextjs/server");
+        const clerk = await clerkClient();
+        const user = await clerk.users.getUser(userId);
+        isPro = Boolean(user.publicMetadata?.isPro);
+      } catch (proCheckError) {
+        console.warn("Failed to check Pro status, defaulting to free:", proCheckError);
+        isPro = false;
+      }
+    }
+
     const { deckJson } = await generateDeck(prompt.trim(), isPro);
     const htmlContent = renderDeckToHTML(deckJson, isPro);
 

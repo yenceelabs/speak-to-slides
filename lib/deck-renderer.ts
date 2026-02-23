@@ -94,7 +94,15 @@ export function isSafeImageUrl(url: string | undefined): boolean {
     }
 
     if (ALLOWED_IMAGE_HOSTS.size === 0) {
-      return true;
+      // Env vars not set — fail-closed in production, allow in dev
+      if (process.env.NODE_ENV === "production") {
+        console.warn(
+          "[isSafeImageUrl] ALLOWED_IMAGE_HOSTS is empty in production — rejecting image:",
+          url
+        );
+        return false;
+      }
+      return true; // dev/test: allow any https
     }
 
     return ALLOWED_IMAGE_HOSTS.has(parsed.host);

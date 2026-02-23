@@ -230,7 +230,7 @@ async function handleReviewPhase(
         conversation.deck_id,
         updatedSlides,
         deckData.theme,
-        false // isPro: TODO check subscription when payments ship
+        false // Telegram users: no Clerk auth — Pro via Supabase subscription when payments ship
       );
 
       const deckUrl = `${BASE_URL}/d/${conversation.deck_id}`;
@@ -266,7 +266,7 @@ export async function buildDeckFromConversation(
   // Build a comprehensive prompt from conversation history
   const prompt = buildGenerationPrompt(conversation);
 
-  const isPro = false; // TODO: check subscription when payments ship
+  const isPro = false; // Telegram users: no Clerk auth — Pro via Supabase subscription when payments ship
   const { deckJson } = await generateDeck(prompt, isPro);
   const htmlContent = renderDeckToHTML(deckJson, isPro);
 
