@@ -98,24 +98,24 @@ export default function HomePage() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-white text-gray-900">
       {/* Hero Section */}
       <div className="flex flex-col items-center justify-center min-h-screen px-4 pt-8 pb-32">
         {/* Logo / Brand */}
         <div className="mb-8 flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl">
+          <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-xl">
             🎤
           </div>
-          <span className="text-xl font-bold text-slate-100">SpeakToSlides</span>
+          <span className="text-xl font-bold text-gray-900">SpeakToSlides</span>
         </div>
 
         {/* Headline */}
         <h1 className="text-5xl sm:text-7xl font-extrabold text-center leading-tight mb-4">
-          <span className="text-slate-100">Speak.</span>{" "}
-          <span className="text-indigo-400">Slide.</span>{" "}
-          <span className="text-slate-100">Share.</span>
+          <span className="text-gray-900">Speak.</span>{" "}
+          <span className="text-gray-900">Slide.</span>{" "}
+          <span className="text-gray-900">Share.</span>
         </h1>
-        <p className="text-lg sm:text-xl text-slate-400 text-center max-w-xl mb-12">
+        <p className="text-lg sm:text-xl text-gray-500 text-center max-w-xl mb-12">
           Describe your presentation in text or voice. AI builds a beautiful
           deck instantly. Shareable link, no apps needed.
         </p>
@@ -123,7 +123,7 @@ export default function HomePage() {
         {/* Chat Input */}
         <div className="w-full max-w-2xl">
           <form onSubmit={handleSubmit} className="relative">
-            <div className="flex gap-2 bg-slate-900 border border-slate-700 rounded-2xl p-2 focus-within:border-indigo-500 transition-colors">
+            <div className="flex gap-2 bg-white border border-gray-200 rounded-2xl p-2 focus-within:border-black transition-colors shadow-sm">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -134,7 +134,7 @@ export default function HomePage() {
                   }
                 }}
                 placeholder="Describe your presentation... e.g. 'Build a deck on why AI is transforming healthcare'"
-                className="flex-1 bg-transparent text-slate-100 placeholder-slate-500 resize-none outline-none text-base leading-relaxed px-3 py-2 min-h-[60px] max-h-40"
+                className="flex-1 bg-transparent text-gray-900 placeholder-gray-400 resize-none outline-none text-base leading-relaxed px-3 py-2 min-h-[60px] max-h-40"
                 rows={2}
                 disabled={isLoading}
               />
@@ -146,7 +146,7 @@ export default function HomePage() {
                   className={`p-2.5 rounded-xl transition-all ${
                     isListening
                       ? "bg-red-500 text-white animate-pulse"
-                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
                   }`}
                   title={isListening ? "Stop recording" : "Start voice input"}
                 >
@@ -156,7 +156,7 @@ export default function HomePage() {
                 <button
                   type="submit"
                   disabled={!prompt.trim() || isLoading}
-                  className="p-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="p-2.5 rounded-xl bg-black text-white hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   {isLoading ? "⏳" : "→"}
                 </button>
@@ -166,7 +166,7 @@ export default function HomePage() {
 
           {/* Voice status */}
           {isListening && (
-            <p className="text-center text-red-400 text-sm mt-2 animate-pulse">
+            <p className="text-center text-red-500 text-sm mt-2 animate-pulse">
               🔴 Listening... Speak your presentation topic
             </p>
           )}
@@ -174,32 +174,32 @@ export default function HomePage() {
           {/* Loading state */}
           {isLoading && (
             <div className="mt-6 text-center">
-              <div className="inline-flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4">
-                <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-slate-300">Building your deck...</span>
+              <div className="inline-flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4">
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                <span className="text-gray-600">Building your deck...</span>
               </div>
             </div>
           )}
 
           {/* Error */}
           {error && (
-            <div className="mt-4 p-4 bg-red-950 border border-red-800 rounded-xl text-red-300 text-sm">
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
               ⚠️ {error}
             </div>
           )}
 
           {/* Success */}
           {result && (
-            <div className="mt-6 p-5 bg-slate-900 border border-indigo-700 rounded-2xl">
+            <div className="mt-6 p-5 bg-gray-50 border border-gray-200 rounded-2xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-indigo-400 font-semibold text-sm mb-1">
+                  <p className="text-green-600 font-semibold text-sm mb-1">
                     ✅ Your deck is ready!
                   </p>
-                  <p className="text-slate-100 font-bold text-lg mb-1">
+                  <p className="text-gray-900 font-bold text-lg mb-1">
                     {result.title}
                   </p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-gray-500 text-sm">
                     {result.slideCount} slides
                   </p>
                 </div>
@@ -207,13 +207,13 @@ export default function HomePage() {
                   href={result.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+                  className="flex-shrink-0 bg-black hover:bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
                 >
                   Open Deck →
                 </a>
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-800">
-                <p className="text-slate-500 text-xs break-all">{result.url}</p>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-gray-400 text-xs break-all">{result.url}</p>
               </div>
             </div>
           )}
@@ -221,7 +221,7 @@ export default function HomePage() {
           {/* Example prompts */}
           {!result && !isLoading && (
             <div className="mt-8">
-              <p className="text-slate-500 text-sm text-center mb-3">
+              <p className="text-gray-400 text-sm text-center mb-3">
                 Try one of these:
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
@@ -229,7 +229,7 @@ export default function HomePage() {
                   <button
                     key={ex}
                     onClick={() => setPrompt(ex)}
-                    className="text-sm bg-slate-900 border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 px-3 py-1.5 rounded-full transition-colors"
+                    className="text-sm bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-400 px-3 py-1.5 rounded-full transition-colors"
                   >
                     {ex}
                   </button>
@@ -241,8 +241,8 @@ export default function HomePage() {
       </div>
 
       {/* Features Section */}
-      <div className="max-w-5xl mx-auto px-4 py-16 border-t border-slate-800">
-        <h2 className="text-3xl font-bold text-center mb-12">
+      <div className="max-w-5xl mx-auto px-4 py-16 border-t border-gray-100">
+        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
           Everything you need to present
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -290,23 +290,23 @@ export default function HomePage() {
           ].map(({ icon, title, desc }) => (
             <div
               key={title}
-              className="bg-slate-900 border border-slate-800 rounded-2xl p-5"
+              className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"
             >
               <div className="text-2xl mb-3">{icon}</div>
-              <h3 className="font-semibold text-slate-100 mb-1">{title}</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+              <h3 className="font-semibold text-gray-900 mb-1">{title}</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
+      <footer className="border-t border-gray-100 py-8 text-center text-gray-400 text-sm">
         <p>
           Built by{" "}
           <a
             href="https://yenceelabs.com"
-            className="text-indigo-400 hover:text-indigo-300"
+            className="text-gray-900 hover:underline font-medium"
           >
             Yencee Labs
           </a>{" "}
