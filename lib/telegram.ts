@@ -110,11 +110,24 @@ export async function getFile(fileId: string): Promise<string> {
   return `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${data.result.file_path}`;
 }
 
-export async function transcribeVoice(fileId: string): Promise<string> {
+/**
+ * Get transcription API config — Groq (primary, free tier) with OpenAI as fallback.
+ * Set GROQ_API_KEY in Vercel env vars. OPENAI_API_KEY is optional fallback.
+ */
+function getTranscriptionConfig(): { apiKey: string; baseUrl: string } {
+  const groqKey = process.env.GROQ_API_KEY;
   const openAiKey = process.env.OPENAI_API_KEY;
-  if (!openAiKey) {
-    throw new Error("OPENAI_API_KEY not configured — voice transcription unavailable");
+  if (groqKey) {
+    return { apiKey: groqKey, baseUrl: "https://api.groq.com/openai/v1" };
   }
+  if (openAiKey) {
+    return { apiKey: openAiKey, baseUrl: "https://api.openai.com/v1" };
+  }
+  throw new Error("No transcription API key configured — set GROQ_API_KEY or OPENAI_API_KEY");
+}
+
+export async function transcribeVoice(fileId: string): Promise<string> {
+  const { apiKey, baseUrl } = getTranscriptionConfig();
 
   const fileUrl = await getFile(fileId);
 
@@ -127,15 +140,16 @@ export async function transcribeVoice(fileId: string): Promise<string> {
   const audioBuffer = await audioRes.arrayBuffer();
   const audioBlob = new Blob([audioBuffer], { type: "audio/ogg" });
 
-  // Send to OpenAI Whisper
+  // Send to Groq/OpenAI Whisper (same API shape)
   const formData = new FormData();
   formData.append("file", audioBlob, "voice.ogg");
-  formData.append("model", "whisper-1");
+  formData.append("model", "whisper-large-v3-turbo"); // Groq model; OpenAI accepts whisper-1
+  formData.append("response_format", "json");
 
-  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+  const res = await fetch(`${baseUrl}/audio/transcriptions`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${openAiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: formData,
   });
