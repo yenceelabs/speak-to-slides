@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://speaktoslides.com/og/home.png",
+        url: "https://speaktoslides.com/api/og?title=Best+Tome+Alternative&subtitle=AI+Presentations+by+Voice+%E2%80%94+First+Deck+Free",
         width: 1200,
         height: 630,
         alt: "SpeakToSlides vs Tome — Best Alternative",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     title: "Best Tome Alternative — AI Presentations by Voice",
     description:
       "Tome is gone. SpeakToSlides builds AI presentations from voice or text. First deck free.",
-    images: ["https://speaktoslides.com/og/home.png"],
+    images: ["https://speaktoslides.com/api/og?title=Best+Tome+Alternative&subtitle=AI+Presentations+by+Voice+%E2%80%94+First+Deck+Free"],
   },
   alternates: {
     canonical: "https://speaktoslides.com/tome-alternative",
