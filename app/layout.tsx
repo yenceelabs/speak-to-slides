@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     url: "https://speaktoslides.com",
     images: [
       {
-        url: "https://speaktoslides.com/og/home.png",
+        url: "https://speaktoslides.com/api/og?title=SpeakToSlides&subtitle=AI+Presentations+by+Voice",
         width: 1200,
         height: 630,
         alt: "SpeakToSlides — Speak. Slide. Share.",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SpeakToSlides",
     description: "Speak. Slide. Share. AI-powered presentation builder.",
-    images: ["https://speaktoslides.com/og/home.png"],
+    images: ["https://speaktoslides.com/api/og?title=SpeakToSlides&subtitle=AI+Presentations+by+Voice"],
   },
 };
 
