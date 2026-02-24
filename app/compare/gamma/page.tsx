@@ -618,11 +618,6 @@ export default function GammaAlternativePage() {
               priceCurrency: "USD",
               description: "First deck free. Pro plans available.",
             },
-            aggregateRating: {
-              "@type": "AggregateRating",
-              ratingValue: "4.8",
-              ratingCount: "50",
-            },
           }),
         }}
       />

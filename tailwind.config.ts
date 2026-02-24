@@ -2,9 +2,8 @@ import type { Config } from "tailwindcss";
 
 // Yencee Labs brand preset — inlined to avoid monorepo path issues on Vercel
 // Source: packages/ui/tailwind/preset.js
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const yenceeLabs: any = {
-  darkMode: ['class'],
+const yenceeLabs: Partial<Config> = {
+  darkMode: ['class'] as ['class'],
   theme: {
     extend: {
       colors: {
