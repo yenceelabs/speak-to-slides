@@ -33,7 +33,7 @@ export async function GET(
     });
     html = renderDeckToHTML(normalized, Boolean(deck.is_pro));
   } catch (error) {
-    console.error("Failed to render deck HTML:", error);
+    console.error("Failed to render deck HTML:", error instanceof Error ? error.message : "unknown error");
     return new NextResponse("Failed to render deck", { status: 500 });
   }
 

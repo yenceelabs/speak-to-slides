@@ -193,7 +193,7 @@ async function handleTextMessage(
       await sendMessage(chatId, result.reply, { parseMode: "none" });
     }
   } catch (error) {
-    console.error("Conversation error:", error);
+    console.error("Conversation error:", error instanceof Error ? error.message : "unknown error");
 
     if (
       error instanceof Error &&
@@ -259,7 +259,7 @@ async function buildAndSendDeck(
       `Deck ready: ${deckResult.title} (${deckResult.slideCount} slides) — ${deckResult.deckUrl}`
     );
   } catch (error) {
-    console.error("Deck build error:", error);
+    console.error("Deck build error:", error instanceof Error ? error.message : "unknown error");
 
     // Revert to confirming state so they can try again
     await updateConversation(conv.id, { state: "confirming" });
@@ -523,7 +523,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Telegram webhook error:", error);
+    console.error("Telegram webhook error:", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json({ ok: true });
   }
 }

@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       theme: deckJson.theme,
     });
   } catch (error) {
-    console.error("generate-deck error:", error);
+    console.error("generate-deck error:", error instanceof Error ? error.message : "unknown error");
 
     if (
       error instanceof Error &&

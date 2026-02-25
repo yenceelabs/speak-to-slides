@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       });
 
     if (uploadErr) {
-      console.error("Storage upload error:", uploadErr);
+      console.error("Storage upload error:", uploadErr instanceof Error ? uploadErr.message : "unknown error");
       return NextResponse.json(
         { error: "Failed to upload image. Storage may not be configured." },
         { status: 500 }
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ imageUrl, slideIndex: idx });
   } catch (error) {
-    console.error("upload-image error:", error);
+    console.error("upload-image error:", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json(
       { error: "Failed to upload image. Please try again." },
       { status: 500 }
