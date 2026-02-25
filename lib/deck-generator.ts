@@ -1,5 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { requireEnv } from "./env";
+import { callLLM } from "./llm-client";
 import {
   renderDeckToHTML,
   parseDeckJSON,
@@ -72,20 +71,14 @@ export async function generateDeck(
   prompt: string,
   isPro: boolean = false
 ): Promise<{ deckJson: DeckJSON; rawContent: string }> {
-  const apiKey = requireEnv("ANTHROPIC_API_KEY");
-  const client = new Anthropic({ apiKey });
-
   const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
 
-  const message = await client.messages.create({
+  const rawContent = await callLLM({
     model,
-    max_tokens: 4096,
     system: GENERATION_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
+    maxTokens: 4096,
   });
-
-  const rawContent =
-    message.content[0].type === "text" ? message.content[0].text : "";
 
   const deckJson = parseDeckJSON(rawContent);
   return { deckJson, rawContent };
@@ -123,16 +116,11 @@ export async function editSlides(
   editRequest: string,
   isPro: boolean = false
 ): Promise<Slide[]> {
-  const apiKey = requireEnv("ANTHROPIC_API_KEY");
-  const client = new Anthropic({ apiKey });
-
   const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
-
   const slidesContext = JSON.stringify(currentSlides, null, 2);
 
-  const message = await client.messages.create({
+  const rawContent = await callLLM({
     model,
-    max_tokens: 4096,
     system: EDIT_SYSTEM_PROMPT,
     messages: [
       {
@@ -140,10 +128,8 @@ export async function editSlides(
         content: `Current slides:\n${slidesContext}\n\nEdit request: ${editRequest}`,
       },
     ],
+    maxTokens: 4096,
   });
-
-  const rawContent =
-    message.content[0].type === "text" ? message.content[0].text : "";
 
   // Parse the slides array
   let clean = rawContent.trim();

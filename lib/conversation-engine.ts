@@ -1,5 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { requireEnv } from "./env";
+import { callLLM } from "./llm-client";
 import {
   Conversation,
   ConversationMessage,
@@ -120,9 +119,6 @@ async function handlePlanningPhase(
   conversation: Conversation,
   userMessage: string
 ): Promise<ConversationResult> {
-  const apiKey = requireEnv("ANTHROPIC_API_KEY");
-  const client = new Anthropic({ apiKey });
-
   // Build conversation history for Claude
   const claudeMessages = buildClaudeMessages(conversation.messages, userMessage);
 
@@ -131,15 +127,12 @@ async function handlePlanningPhase(
       ? `\n\nCurrent proposed outline:\n${formatOutline(conversation.outline)}`
       : "";
 
-  const message = await client.messages.create({
+  const rawReply = await callLLM({
     model: "claude-3-haiku-20240307",
-    max_tokens: 1024,
     system: `${PLANNER_SYSTEM_PROMPT}\n\nCurrent state: ${conversation.state}${stateContext}`,
     messages: claudeMessages,
+    maxTokens: 1024,
   });
-
-  const rawReply =
-    message.content[0].type === "text" ? message.content[0].text : "";
 
   // Check for state transition tags
   const hasOutlineReady = rawReply.includes("[READY_TO_OUTLINE]");
@@ -185,21 +178,15 @@ async function handleReviewPhase(
   conversation: Conversation,
   userMessage: string
 ): Promise<ConversationResult> {
-  const apiKey = requireEnv("ANTHROPIC_API_KEY");
-  const client = new Anthropic({ apiKey });
-
   // Build conversation history
   const claudeMessages = buildClaudeMessages(conversation.messages, userMessage);
 
-  const message = await client.messages.create({
+  const rawReply = await callLLM({
     model: "claude-3-haiku-20240307",
-    max_tokens: 1024,
     system: `${PLANNER_SYSTEM_PROMPT}\n\nCurrent state: reviewing\nThe user has received their deck at ${BASE_URL}/d/${conversation.deck_id}`,
     messages: claudeMessages,
+    maxTokens: 1024,
   });
-
-  const rawReply =
-    message.content[0].type === "text" ? message.content[0].text : "";
 
   const hasEditDetected = rawReply.includes("[EDIT_DETECTED]");
 
@@ -331,17 +318,13 @@ async function generateOutline(
   conversation: Conversation,
   latestMessage: string
 ): Promise<SlideOutline> {
-  const apiKey = requireEnv("ANTHROPIC_API_KEY");
-  const client = new Anthropic({ apiKey });
-
   // Build context from conversation
   const context = conversation.messages
     .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.content}`)
     .join("\n");
 
-  const message = await client.messages.create({
+  const rawContent = await callLLM({
     model: "claude-3-haiku-20240307",
-    max_tokens: 1024,
     system: `Generate a slide outline based on the conversation context. Output ONLY valid JSON:
 {
   "title": "Presentation Title",
@@ -359,10 +342,8 @@ Generate 8-12 slides. Start with title, end with closing. No markdown wrapping.`
         content: `Conversation so far:\n${context}\n\nLatest: ${latestMessage}\n\nGenerate the outline.`,
       },
     ],
+    maxTokens: 1024,
   });
-
-  const rawContent =
-    message.content[0].type === "text" ? message.content[0].text : "";
 
   let clean = rawContent.trim();
   if (clean.startsWith("```")) {
