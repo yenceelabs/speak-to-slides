@@ -27,7 +27,8 @@ Output ONLY valid JSON in this exact format (no markdown, no explanation):
     { "type": "content", "heading": "...", "body": "paragraph text" },
     { "type": "quote", "text": "...", "attribution": "..." },
     { "type": "stats", "heading": "...", "stats": [{"value": "90%", "label": "description"}] },
-    { "type": "image", "heading": "...", "caption": "...", "placeholder": true }
+    { "type": "image", "heading": "...", "caption": "...", "placeholder": true },
+    { "type": "questions", "heading": "Questions?", "subtitle": "Let's discuss", "points": ["Optional prompt 1?", "Optional prompt 2?"] }
   ]
 }
 
@@ -35,7 +36,8 @@ Theme options: "modern" (dark navy, indigo accent), "minimal" (light, clean), "b
 
 Rules:
 - Always start with a title slide
-- Always end with a "Thank You" or "Questions?" title slide
+- Always end with a "questions" type slide (NOT a title slide) — this renders an interactive Q&A screen with animated prompts
+- For the questions slide, "points" are optional discussion prompts (2-4 short questions). Leave "points" empty [] for an open-floor Q&A.
 - Mix slide types for visual variety (avoid 3+ bullets in a row)
 - Keep text concise — presentations need punchy text, not paragraphs
 - For bullets: max 5 points per slide, each under 15 words

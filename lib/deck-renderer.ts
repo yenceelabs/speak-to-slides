@@ -1,5 +1,5 @@
 export interface Slide {
-  type: "title" | "bullets" | "content" | "quote" | "stats" | "image";
+  type: "title" | "bullets" | "content" | "quote" | "stats" | "image" | "questions";
   heading?: string;
   subtitle?: string;
   points?: string[];
@@ -27,6 +27,7 @@ const ALLOWED_SLIDE_TYPES = new Set<Slide["type"]>([
   "quote",
   "stats",
   "image",
+  "questions",
 ]);
 
 function extractHost(url: string | undefined): string | null {
@@ -339,6 +340,84 @@ function renderSlide(
             ${imageBlock}
             ${caption ? `<p style="font-size:1rem;color:${textMuted};text-align:center;font-style:italic;">${caption}</p>` : ""}
           </div>
+        </div>`;
+    }
+
+    case "questions": {
+      // Interactive Q&A closing slide
+      const discussionPoints = slide.points && slide.points.length > 0 ? slide.points : [];
+      const qHeading = heading || "Questions?";
+      const qSubtitle = subtitle || "Let's discuss";
+      return `
+        <div class="slide" data-index="${index}" style="${slideStyle}">
+          <div style="max-width:960px;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;">
+
+            <!-- Left: Big Q heading + emoji pulse -->
+            <div style="text-align:center;">
+              <div id="q-emoji-${index}" style="font-size:clamp(4rem,8vw,7rem);line-height:1;margin-bottom:24px;display:inline-block;animation:qPulse 2s ease-in-out infinite;">💬</div>
+              <h1 style="font-size:clamp(2.5rem,5vw,4.5rem);font-weight:900;color:${text};line-height:1.1;margin:0 0 16px;">${qHeading}</h1>
+              <p style="font-size:clamp(1rem,2vw,1.4rem);color:${textMuted};font-weight:300;">${qSubtitle}</p>
+              <!-- Floating bubbles -->
+              <div style="position:relative;height:60px;margin-top:32px;">
+                <span style="position:absolute;left:10%;animation:floatUp 3s ease-in-out infinite 0s;font-size:1.4rem;opacity:0.6;">?</span>
+                <span style="position:absolute;left:35%;animation:floatUp 3s ease-in-out infinite 0.7s;font-size:1rem;opacity:0.4;">?</span>
+                <span style="position:absolute;left:60%;animation:floatUp 3s ease-in-out infinite 1.4s;font-size:1.6rem;opacity:0.7;color:${accent};">?</span>
+                <span style="position:absolute;left:80%;animation:floatUp 3s ease-in-out infinite 2s;font-size:0.9rem;opacity:0.3;">?</span>
+              </div>
+            </div>
+
+            <!-- Right: Discussion prompts OR "open floor" card -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              ${discussionPoints.length > 0
+                ? discussionPoints.map((pt, i) => `
+                  <div class="q-prompt" style="
+                    background:${surface};border:1px solid ${border};border-left:4px solid ${accent};
+                    border-radius:12px;padding:16px 20px;
+                    opacity:0;transform:translateX(20px);
+                    animation:slideInRight 0.5s ease forwards ${0.2 + i * 0.15}s;
+                  ">
+                    <span style="color:${accent};font-weight:700;margin-right:8px;">Q${i + 1}.</span>
+                    <span style="color:${text};font-size:clamp(0.85rem,1.4vw,1.05rem);line-height:1.5;">${escapeHtml(pt)}</span>
+                  </div>`).join("")
+                : `
+                  <div style="
+                    background:${surface};border:2px dashed ${border};border-radius:16px;
+                    padding:40px 32px;text-align:center;
+                  ">
+                    <div style="font-size:2.5rem;margin-bottom:16px;">🎙️</div>
+                    <p style="color:${textMuted};font-size:1.1rem;line-height:1.6;margin:0;">
+                      The floor is open.<br/>
+                      <span style="color:${text};font-weight:600;">What's on your mind?</span>
+                    </p>
+                  </div>
+                  <div style="
+                    background:linear-gradient(135deg,${accent}22,${accent}11);
+                    border:1px solid ${accent}44;border-radius:12px;
+                    padding:16px 20px;text-align:center;
+                  ">
+                    <p style="color:${textMuted};font-size:0.9rem;margin:0;">
+                      Press <kbd style="background:${surface};border:1px solid ${border};border-radius:4px;padding:2px 6px;color:${text};font-size:0.8rem;">F</kbd> for fullscreen &nbsp;·&nbsp;
+                      <kbd style="background:${surface};border:1px solid ${border};border-radius:4px;padding:2px 6px;color:${text};font-size:0.8rem;">←→</kbd> to navigate
+                    </p>
+                  </div>`
+              }
+            </div>
+          </div>
+
+          <style>
+            @keyframes qPulse {
+              0%, 100% { transform: scale(1) rotate(-3deg); }
+              50% { transform: scale(1.08) rotate(3deg); }
+            }
+            @keyframes floatUp {
+              0% { transform: translateY(0); opacity: 0.5; }
+              50% { transform: translateY(-20px); opacity: 0.9; }
+              100% { transform: translateY(0); opacity: 0.5; }
+            }
+            @keyframes slideInRight {
+              to { opacity: 1; transform: translateX(0); }
+            }
+          </style>
         </div>`;
     }
 
