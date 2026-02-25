@@ -30,15 +30,23 @@ export default function HomePage() {
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate deck");
+      let data: { error?: string; url?: string; title?: string; slideCount?: number } = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response (e.g. network error, HTML error page)
       }
 
-      setResult({ url: data.url, title: data.title, slideCount: data.slideCount });
+      if (!res.ok) {
+        if (res.status === 429) {
+          throw new Error(data.error || "Our servers are busy — please wait a moment and try again.");
+        }
+        throw new Error(data.error || "Failed to generate presentation. Please try again.");
+      }
+
+      setResult({ url: data.url!, title: data.title!, slideCount: data.slideCount! });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
