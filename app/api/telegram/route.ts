@@ -312,7 +312,7 @@ async function handleVoice(chatId: number, fileId: string): Promise<void> {
     // Process the transcribed text through the conversation engine
     await handleTextMessage(chatId, transcribedText);
   } catch (err) {
-    console.error("Voice transcription error:", err);
+    console.error("Voice transcription error:", err instanceof Error ? err.message : "unknown error");
     await sendMessage(
       chatId,
       "❌ Failed to process voice message. Please type your request instead."
