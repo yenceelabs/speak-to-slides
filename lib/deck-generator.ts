@@ -75,7 +75,7 @@ export async function generateDeck(
   const apiKey = requireEnv("ANTHROPIC_API_KEY");
   const client = new Anthropic({ apiKey });
 
-  const model = isPro ? "claude-sonnet-4-20250514" : "claude-3-haiku-20240307";
+  const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
 
   const message = await client.messages.create({
     model,
@@ -126,7 +126,7 @@ export async function editSlides(
   const apiKey = requireEnv("ANTHROPIC_API_KEY");
   const client = new Anthropic({ apiKey });
 
-  const model = isPro ? "claude-sonnet-4-20250514" : "claude-3-haiku-20240307";
+  const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
 
   const slidesContext = JSON.stringify(currentSlides, null, 2);
 
@@ -198,7 +198,6 @@ export async function createDeckWithSlides(params: {
       theme: params.theme,
       is_public: true,
       conversation_id: params.conversationId || null,
-      is_pro: params.isPro ?? false,
     })
     .select("id")
     .single();
